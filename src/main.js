@@ -513,6 +513,31 @@ async function boot() {
         false
       );
     };
+  if ($('btn-avoid-traffic')) {
+    $('btn-avoid-traffic').onclick = () => {
+      playSoundChime('buzz');
+      // 1. Train negative valence into Mushroom body via PPL1 dopamine avoidance
+      mb.teach('traffic', -1);
+      state.cue = 'traffic';
+      state.explicitGoal = null;
+
+      // 2. Point compass toward traffic initially to trigger the collision avoidance reflex
+      const b = world.bearingTo('traffic');
+      if (b !== null) {
+        cueAngle = b;
+        compass.setCue(b, 0.95);
+      }
+      world.manualMode = false;
+      updateFlightModeUI(false);
+
+      setMascotSpeech(
+        `"🚨 <b>TRAFFIC HAZARD DETECTED!</b> 100 Feet Road autos ahead! PPL1 dopamine avoidance fired! Watch me flip heading <b>180° away</b>!"`,
+        '🚗 AVOIDANCE REFLEX',
+        false
+      );
+      say('nona', '⚠️ Traffic avoidance reflex engaged. PPL1 dopamine depressed approach synapses. Steering 180° away from 100 Feet Road vehicles!', 'bad');
+      renderRadarWaypoints();
+    };
   }
 
   if ($('btn-stunt-now')) {
