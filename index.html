@@ -278,6 +278,244 @@
   body.theme-dusk #mm-target { color: #ffc55c !important; }
 
   /* =========================================================================
+     SASSY CARTOON FLY MASCOT & SUGAR RUSH HUD
+     ========================================================================= */
+  #fly-mascot-card {
+    position: absolute;
+    bottom: 18px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    pointer-events: auto;
+    z-index: 30;
+    transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    user-select: none;
+  }
+
+  .mascot-bubble-wrap {
+    position: relative;
+    max-width: 280px;
+    margin-bottom: 6px;
+    filter: drop-shadow(0 8px 24px rgba(0, 30, 60, 0.18));
+    animation: bubbleFloat 3s ease-in-out infinite;
+    transition: all 0.2s ease;
+  }
+  @keyframes bubbleFloat {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-4px); }
+  }
+
+  .mascot-speech-bubble {
+    background: #ffffff;
+    border: 2px solid #16a34a;
+    border-radius: 16px 16px 4px 16px;
+    padding: 10px 14px;
+    position: relative;
+    font: 600 12px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: #14532d;
+    box-shadow: 0 4px 14px rgba(22, 101, 52, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  }
+  .mascot-bubble-tail {
+    position: absolute;
+    bottom: -9px;
+    right: 36px;
+    width: 0;
+    height: 0;
+    border-left: 9px solid transparent;
+    border-right: 9px solid transparent;
+    border-top: 10px solid #16a34a;
+  }
+  .mascot-bubble-tail::after {
+    content: '';
+    position: absolute;
+    bottom: 2px;
+    left: -7px;
+    width: 0;
+    height: 0;
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-top: 8px solid #ffffff;
+  }
+
+  .mascot-speaker {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font: 800 10px/1 monospace;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #16a34a;
+    margin-bottom: 5px;
+    border-bottom: 1px dashed rgba(22, 163, 74, 0.25);
+    padding-bottom: 4px;
+  }
+  .mascot-speaker-badge {
+    background: #dcfce7;
+    color: #15803d;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-size: 9.5px;
+    font-weight: 700;
+  }
+
+  .mascot-msg {
+    font-size: 11.5px;
+    color: #0f172a;
+    line-height: 1.45;
+  }
+  .mascot-msg b {
+    color: #15803d;
+  }
+
+  .mascot-actions {
+    display: flex;
+    gap: 5px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+  .mascot-act-btn {
+    background: #f0fdf4;
+    border: 1px solid #86efac;
+    color: #166534;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font: 700 10.5px -apple-system, sans-serif;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .mascot-act-btn:hover {
+    background: #dcfce7;
+    border-color: #4ade80;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(34, 197, 94, 0.25);
+  }
+  .mascot-act-btn.primary {
+    background: linear-gradient(135deg, #16a34a, #22c55e);
+    color: #ffffff;
+    border-color: #15803d;
+  }
+  .mascot-act-btn.primary:hover {
+    background: linear-gradient(135deg, #15803d, #16a34a);
+  }
+
+  .mascot-avatar-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+  }
+
+  .mascot-fly-svg-card {
+    width: 95px;
+    height: 112px;
+    filter: drop-shadow(0 10px 22px rgba(0, 40, 20, 0.25));
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    position: relative;
+  }
+  .mascot-fly-svg-card:hover {
+    transform: scale(1.08) rotate(-3deg);
+  }
+  .mascot-fly-svg-card:active {
+    transform: scale(0.95) rotate(2deg);
+  }
+
+  @keyframes wingFlutterL {
+    0%, 100% { transform: rotate(0deg); }
+    50% { transform: rotate(-9deg) scaleY(0.91); }
+  }
+  @keyframes wingFlutterR {
+    0%, 100% { transform: rotate(0deg); }
+    50% { transform: rotate(9deg) scaleY(0.91); }
+  }
+  .wing-l {
+    transform-origin: 85px 125px;
+    animation: wingFlutterL 0.16s ease-in-out infinite alternate;
+  }
+  .wing-r {
+    transform-origin: 115px 125px;
+    animation: wingFlutterR 0.16s ease-in-out infinite alternate;
+  }
+
+  @keyframes antWobble {
+    0%, 100% { transform: rotate(0deg); }
+    50% { transform: rotate(5deg); }
+  }
+  .ant-l {
+    transform-origin: 85px 50px;
+    animation: antWobble 0.8s ease-in-out infinite alternate;
+  }
+  .ant-r {
+    transform-origin: 115px 50px;
+    animation: antWobble 0.7s ease-in-out infinite alternate;
+  }
+
+  @keyframes mascotHop {
+    0% { transform: scale(1) translateY(0); }
+    30% { transform: scale(1.18) translateY(-14px) rotate(-6deg); }
+    60% { transform: scale(1.05) translateY(-4px) rotate(4deg); }
+    100% { transform: scale(1) translateY(0) rotate(0deg); }
+  }
+  .mascot-hop {
+    animation: mascotHop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  @keyframes mascotSpin {
+    0% { transform: rotate(0deg) scale(1); }
+    40% { transform: rotate(180deg) scale(1.28); }
+    100% { transform: rotate(360deg) scale(1); }
+  }
+  .mascot-stunt-active {
+    animation: mascotSpin 1.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .nectar-flash {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(circle at center, rgba(245, 158, 11, 0.35) 0%, rgba(217, 119, 6, 0.15) 50%, transparent 80%);
+    opacity: 0;
+    z-index: 99999;
+    transition: opacity 0.4s ease;
+  }
+  .nectar-flash.show {
+    opacity: 1;
+  }
+
+  /* Dusk Theme adjustments for mascot */
+  body.theme-dusk .mascot-speech-bubble {
+    background: rgba(10, 20, 14, 0.94) !important;
+    border-color: #22c55e !important;
+    color: #e2e8f0 !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.75) !important;
+  }
+  body.theme-dusk .mascot-msg {
+    color: #cbd5e1 !important;
+  }
+  body.theme-dusk .mascot-bubble-tail {
+    border-top-color: #22c55e !important;
+  }
+  body.theme-dusk .mascot-bubble-tail::after {
+    border-top-color: #0a140e !important;
+  }
+  body.theme-dusk .mascot-speaker {
+    color: #4ade80 !important;
+  }
+  body.theme-dusk .mascot-speaker-badge {
+    background: #052e16 !important;
+    color: #86efac !important;
+  }
+  body.theme-dusk .mascot-act-btn {
+    background: #14281c !important;
+    border-color: #1e4d2b !important;
+    color: #86efac !important;
+  }
+  body.theme-dusk .mascot-act-btn:hover {
+    background: #1c3d28 !important;
+    color: #ffffff !important;
+  }
+
+  /* =========================================================================
      RADAR MAP TAB IN CONSOLE
      ========================================================================= */
   #tab-map {
@@ -1124,6 +1362,189 @@
       <div><span>airspeed</span><b id="airspeed">42 km/h</b></div>
       <div><span>altitude</span><b id="altitude">88 m</b></div>
     </div>
+
+    <!-- Sassy Cartoon Fly Mascot Card (Inspired by reference drawing) -->
+    <div class="overlay" id="fly-mascot-card">
+      <div class="mascot-bubble-wrap" id="mascot-bubble">
+        <div class="mascot-speech-bubble">
+          <div class="mascot-speaker">
+            <span>🪰 NONA · BIO MASCOT</span>
+            <span class="mascot-speaker-badge" id="mascot-mood">🍯 NECTAR SCOUT</span>
+          </div>
+          <div class="mascot-msg" id="mascot-speech-text">
+            "Sup human! Got 1.0 dopamine? Point my compass to <b>Cubbon Park</b> and watch me do a 360° victory corkscrew over the trees!"
+          </div>
+          <div class="mascot-actions">
+            <button class="mascot-act-btn primary" id="btn-hunt-nectar" title="Fly to Cubbon Park and execute celebratory stunt">
+              🍯 Hunt Nectar (Cubbon)
+            </button>
+            <button class="mascot-act-btn" id="btn-stunt-now" title="Execute a 360° corkscrew roll in the Bangalore sky right now!">
+              🔄 360° Stunt
+            </button>
+            <button class="mascot-act-btn" id="btn-mascot-talk" title="Hear a sassy insect quote">
+              💬 Sassy Quip
+            </button>
+          </div>
+          <div class="mascot-bubble-tail"></div>
+        </div>
+      </div>
+
+      <div class="mascot-avatar-wrap" id="mascot-avatar" title="Click me for sassy quotes & reactions!">
+        <div class="mascot-fly-svg-card" id="mascot-svg-card">
+          <svg class="mascot-fly-svg" viewBox="0 0 200 240" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <!-- Ommatidia compound mesh pattern for sunglasses eyes -->
+              <pattern id="mascotMesh" width="4" height="4" patternUnits="userSpaceOnUse">
+                <path d="M 0 0 L 4 4 M 4 0 L 0 4" fill="none" stroke="rgba(255,255,255,0.42)" stroke-width="0.75" />
+              </pattern>
+              <!-- Eye spherical reflection gradient -->
+              <radialGradient id="eyeGrad" cx="35%" cy="30%" r="65%">
+                <stop offset="0%" stop-color="#5eead4" />
+                <stop offset="45%" stop-color="#0d9488" />
+                <stop offset="85%" stop-color="#115e59" />
+                <stop offset="100%" stop-color="#042f2c" />
+              </radialGradient>
+              <!-- Body Lime Gradient -->
+              <linearGradient id="flyBodyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#a3e635" />
+                <stop offset="40%" stop-color="#84cc16" />
+                <stop offset="100%" stop-color="#4d7c0f" />
+              </linearGradient>
+              <!-- Belly Yellow-Green Gradient -->
+              <linearGradient id="flyBellyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#d9f99d" />
+                <stop offset="50%" stop-color="#bef264" />
+                <stop offset="100%" stop-color="#a3e635" />
+              </linearGradient>
+              <!-- Purple Limbs Gradient -->
+              <linearGradient id="flyLimbGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#6b21a8" />
+                <stop offset="100%" stop-color="#3b0764" />
+              </linearGradient>
+              <!-- Wing Cyan Gradient -->
+              <linearGradient id="flyWingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="rgba(224, 242, 254, 0.88)" />
+                <stop offset="70%" stop-color="rgba(186, 230, 253, 0.65)" />
+                <stop offset="100%" stop-color="rgba(125, 211, 252, 0.45)" />
+              </linearGradient>
+              <!-- Halftone Dot Pattern for background comic circle -->
+              <pattern id="comicDots" width="8" height="8" patternUnits="userSpaceOnUse">
+                <circle cx="4" cy="4" r="2.2" fill="#22c55e" opacity="0.38" />
+              </pattern>
+            </defs>
+
+            <!-- Comic Pop Halftone Circular Aura -->
+            <g class="mascot-aura">
+              <circle cx="100" cy="120" r="72" fill="#dcfce7" opacity="0.65" />
+              <circle cx="100" cy="120" r="72" fill="url(#comicDots)" />
+              <!-- Halftone scatter dots around edge -->
+              <circle cx="42" cy="70" r="3.5" fill="#22c55e" opacity="0.4" />
+              <circle cx="34" cy="90" r="2.5" fill="#22c55e" opacity="0.35" />
+              <circle cx="160" cy="65" r="3.5" fill="#22c55e" opacity="0.4" />
+              <circle cx="170" cy="85" r="2.5" fill="#22c55e" opacity="0.35" />
+              <circle cx="165" cy="160" r="3" fill="#22c55e" opacity="0.35" />
+            </g>
+
+            <!-- Translucent Wings (Flapping behind body) -->
+            <g class="mascot-wings">
+              <!-- Left Wing -->
+              <g class="wing-l">
+                <path d="M 85 125 C 50 110, 15 135, 25 175 C 32 198, 70 185, 88 150 Z"
+                      fill="url(#flyWingGrad)" stroke="#38bdf8" stroke-width="1.8" />
+                <path d="M 75 138 C 52 145, 38 165, 35 180" fill="none" stroke="#bae6fd" stroke-width="1.2" opacity="0.8" />
+              </g>
+              <!-- Right Wing -->
+              <g class="wing-r">
+                <path d="M 115 125 C 150 110, 185 135, 175 175 C 168 198, 130 185, 112 150 Z"
+                      fill="url(#flyWingGrad)" stroke="#38bdf8" stroke-width="1.8" />
+                <path d="M 125 138 C 148 145, 162 165, 165 180" fill="none" stroke="#bae6fd" stroke-width="1.2" opacity="0.8" />
+              </g>
+            </g>
+
+            <!-- Purple Insect Legs & Feet -->
+            <g class="mascot-legs" stroke="url(#flyLimbGrad)" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+              <!-- Left Leg -->
+              <path d="M 86 195 L 82 216 L 80 230" />
+              <path d="M 72 234 Q 80 230 84 230" stroke-width="3.5" />
+              <circle cx="72" cy="234" r="2" fill="#4c1d95" stroke="none" />
+              <!-- Right Leg -->
+              <path d="M 114 195 L 118 216 L 120 230" />
+              <path d="M 128 234 Q 120 230 116 230" stroke-width="3.5" />
+              <circle cx="128" cy="234" r="2" fill="#4c1d95" stroke="none" />
+            </g>
+
+            <!-- Main Torso & Pear-shaped Abdomen -->
+            <g class="mascot-body">
+              <path d="M 80 115 C 60 130, 52 165, 68 188 C 80 202, 120 202, 132 188 C 148 165, 140 130, 120 115 Z"
+                    fill="url(#flyBodyGrad)" stroke="#1e3a10" stroke-width="3" stroke-linejoin="round" />
+              <!-- Sunny Yellow-Green Belly Plate -->
+              <ellipse cx="100" cy="162" rx="30" ry="34" fill="url(#flyBellyGrad)" stroke="#4d7c0f" stroke-width="1.8" />
+              <!-- Abdomen segment contours -->
+              <path d="M 84 150 Q 100 156 116 150" fill="none" stroke="#65a30d" stroke-width="1.8" opacity="0.7" />
+              <path d="M 82 168 Q 100 174 118 168" fill="none" stroke="#65a30d" stroke-width="1.8" opacity="0.7" />
+              <path d="M 86 184 Q 100 188 114 184" fill="none" stroke="#65a30d" stroke-width="1.8" opacity="0.7" />
+            </g>
+
+            <!-- Purple Segmented Arms & Poses (Attitude pose from image) -->
+            <g class="mascot-arms" stroke="url(#flyLimbGrad)" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round" fill="none">
+              <!-- Left Arm: Hand on Hip -->
+              <path d="M 72 126 C 54 135, 46 148, 54 162 C 58 168, 66 166, 68 164" />
+              <circle cx="68" cy="164" r="2.5" fill="#4c1d95" stroke="none" />
+              <circle cx="65" cy="168" r="2" fill="#4c1d95" stroke="none" />
+
+              <!-- Right Arm: Gesturing outward with swagger! -->
+              <path d="M 128 126 C 142 134, 150 144, 146 154 C 144 158, 154 148, 166 130" />
+              <path d="M 166 130 L 174 122" stroke-width="3.5" />
+              <path d="M 166 130 L 176 128" stroke-width="3" />
+              <circle cx="174" cy="122" r="2.2" fill="#4c1d95" stroke="none" />
+              <circle cx="176" cy="128" r="2" fill="#4c1d95" stroke="none" />
+            </g>
+
+            <!-- Head & Face (Lime green) -->
+            <g class="mascot-head">
+              <path d="M 68 85 C 58 55, 142 55, 132 85 C 134 105, 122 118, 100 118 C 78 118, 66 105, 68 85 Z"
+                    fill="url(#flyBodyGrad)" stroke="#1e3a10" stroke-width="3" stroke-linejoin="round" />
+
+              <!-- Antennae with Wobble Animation -->
+              <g class="ant-l">
+                <path d="M 86 52 C 82 32, 68 22, 64 16" fill="none" stroke="#4c1d95" stroke-width="3.8" stroke-linecap="round" />
+                <path d="M 64 16 C 58 14, 58 22, 64 22 Z" fill="#6b21a8" />
+              </g>
+              <g class="ant-r">
+                <path d="M 114 52 C 118 32, 132 22, 136 16" fill="none" stroke="#4c1d95" stroke-width="3.8" stroke-linecap="round" />
+                <path d="M 136 16 C 142 14, 142 22, 136 22 Z" fill="#6b21a8" />
+              </g>
+
+              <!-- Big Compound Mesh Sunglasses Eyes -->
+              <!-- Left Eye -->
+              <g class="eye-left">
+                <ellipse cx="76" cy="76" rx="22" ry="25" fill="#042f2c" stroke="#134e4a" stroke-width="2.5" />
+                <ellipse cx="76" cy="76" rx="20" ry="23" fill="url(#eyeGrad)" />
+                <ellipse cx="76" cy="76" rx="20" ry="23" fill="url(#mascotMesh)" />
+                <path d="M 64 64 C 70 58, 82 58, 86 64" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" opacity="0.85" />
+                <ellipse cx="68" cy="66" rx="3.5" ry="2" fill="#ffffff" opacity="0.9" transform="rotate(-25, 68, 66)" />
+              </g>
+
+              <!-- Right Eye -->
+              <g class="eye-right">
+                <ellipse cx="124" cy="76" rx="22" ry="25" fill="#042f2c" stroke="#134e4a" stroke-width="2.5" />
+                <ellipse cx="124" cy="76" rx="20" ry="23" fill="url(#eyeGrad)" />
+                <ellipse cx="124" cy="76" rx="20" ry="23" fill="url(#mascotMesh)" />
+                <path d="M 114 64 C 120 58, 132 58, 136 64" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" opacity="0.85" />
+                <ellipse cx="118" cy="66" rx="3.5" ry="2" fill="#ffffff" opacity="0.9" transform="rotate(-25, 118, 66)" />
+              </g>
+
+              <!-- Cheeky Smirk & Facial Features -->
+              <path d="M 98 94 Q 100 97 102 94" fill="none" stroke="#1e3a10" stroke-width="2" stroke-linecap="round" />
+              <!-- Smug smirk line -->
+              <path d="M 88 105 Q 102 110 114 102" fill="none" stroke="#1e293b" stroke-width="3" stroke-linecap="round" />
+              <!-- Smirk dimple/crease at corner -->
+              <path d="M 114 102 Q 118 100 117 97" fill="none" stroke="#1e293b" stroke-width="2.4" stroke-linecap="round" />
+            </g>
+          </svg>
+        </div>
+      </div>
+    </div>
   </div>
 
   <aside id="panel" class="mode-split">
@@ -1329,6 +1750,9 @@
     </div>
   </aside>
 </div>
+
+<!-- Golden Nectar Flash Visual FX -->
+<div class="nectar-flash" id="nectar-flash"></div>
 
 <!-- Immersive Henry Heffernan Workstation -->
 <div id="desk"></div>

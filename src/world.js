@@ -80,6 +80,9 @@ export class World {
     this.boost = false;
     this.inputs = { forward: 0, turn: 0, pitch: 0, boost: false };
     this.trail = [];
+    this.stuntTimer = 0;
+    this.stuntType = null;
+    this.stuntMax = 1;
 
     // Lighting & Environment
     this._setupEnvironment();
@@ -837,14 +840,35 @@ export class World {
       this.pos.z -= (this.pos.z / r) * pull;
     }
 
+    // Stunt / Sugar Rush Acrobatic Maneuver
+    let currentRoll = this.roll;
+    let currentPitch = this.pitch;
+    if (this.stuntTimer > 0) {
+      this.stuntTimer -= dt;
+      const progress = 1 - (this.stuntTimer / this.stuntMax);
+      if (this.stuntType === 'barrel_roll') {
+        currentRoll = progress * Math.PI * 4; // 720 degree double corkscrew!
+        currentPitch = Math.sin(progress * Math.PI * 2) * 0.45;
+        if (this.flyGlow) {
+          this.flyGlow.color.setHex(0xf59e0b); // Golden honey glow!
+          this.flyGlow.intensity = 4.8;
+        }
+      }
+    } else {
+      if (this.flyGlow && this.flyGlow.intensity > 2.5) {
+        this.flyGlow.color.setHex(0x6be6ff);
+        this.flyGlow.intensity = 2.4;
+      }
+    }
+
     // Orient fly model
     this.fly.position.copy(this.pos);
     this.fly.rotation.y = this.heading;
-    this.fly.rotation.z = this.roll;
-    this.fly.rotation.x = this.pitch;
+    this.fly.rotation.z = currentRoll;
+    this.fly.rotation.x = currentPitch;
 
     // Wing flap frequency
-    const flapFreq = this.boost ? 72 : 44;
+    const flapFreq = this.boost || this.stuntTimer > 0 ? 76 : 44;
     const flap = Math.sin(this._t * flapFreq) * 0.95;
     this.wingL.rotation.z = flap;
     this.wingR.rotation.z = -flap;
@@ -900,6 +924,12 @@ export class World {
     if (!this._camLook) this._camLook = rawLookTarget.clone();
     this._camLook.lerp(rawLookTarget, 1 - Math.pow(0.0002, dt));
     this.camera.lookAt(this._camLook);
+  }
+
+  doStunt(type = 'barrel_roll', dur = 2.4) {
+    this.stuntType = type;
+    this.stuntTimer = dur;
+    this.stuntMax = dur;
   }
 
   enterHome(done) {

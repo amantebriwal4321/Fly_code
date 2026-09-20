@@ -361,6 +361,13 @@ async function boot() {
     const mark = world.marks.find((m) => m.key === key);
     const dist = mark ? world.pos.distanceTo(mark.vec).toFixed(0) : '—';
     say('nona', `🚀 Navigation Locked: ${L.label} (${dist}m). Autopilot steering!`, 'good');
+    if (key === 'cubbon') {
+      setMascotSpeech(
+        `"Locking onto <b>Cubbon Park</b>! 100% organic bamboo nectar blossoms ahead! Get ready for the victory roll!"`,
+        '🍯 NECTAR EN ROUTE',
+        false
+      );
+    }
     renderRadarWaypoints();
   }
 
@@ -382,6 +389,156 @@ async function boot() {
   destBtns.forEach((btn) => {
     btn.onclick = () => flyTo(btn.getAttribute('data-place'));
   });
+
+  // =========================================================================
+  // SASSY CARTOON FLY MASCOT & CUBBON NECTAR RUSH SYSTEM
+  // =========================================================================
+  let audioCtx = null;
+  function playSoundChime(type = 'chime') {
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+
+      if (type === 'chime') {
+        const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51];
+        notes.forEach((freq, idx) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, audioCtx.currentTime + idx * 0.07);
+          gain.gain.setValueAtTime(0.09, audioCtx.currentTime + idx * 0.07);
+          gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + idx * 0.07 + 0.35);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(audioCtx.currentTime + idx * 0.07);
+          osc.stop(audioCtx.currentTime + idx * 0.07 + 0.35);
+        });
+      } else if (type === 'buzz') {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(230, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.26);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.26);
+      }
+    } catch {}
+  }
+
+  const SASSY_QUOTES = [
+    `"1 microwatt of metabolic brain power, baby. Can ChatGPT do a 720° corkscrew over Cubbon Park? Didn't think so!"`,
+    `"You gave me 1.0 dopamine reward?! Pure organic sugar rush straight to my Mushroom Body!"`,
+    `"4,000 compound eye ommatidia. I see Bangalore in 200 FPS ultra-HD, human."`,
+    `"Cruising Bangalore airspace at 65 km/h. Watch out for pigeons and coconut trees!"`,
+    `"My central complex has 166 neurons and I still navigate better than Google Maps in Silk Board traffic!"`,
+    `"Did somebody say sugar? Say no more, steering compass straight to the blossoms!"`,
+    `"Bamboo nectar in Cubbon Park is 10/10. Highly recommend!"`,
+    `"Catch me if you can! Doing a victory roll over the lush canopy!"`,
+    `"Hey! Tickling my wings increases wingbeat frequency to 240 Hz! Careful!"`
+  ];
+
+  let quoteIdx = 0;
+  function setMascotSpeech(html, mood = '🍯 NECTAR SCOUT', stunt = false) {
+    const textEl = $('mascot-speech-text');
+    const moodEl = $('mascot-mood');
+    const cardEl = $('mascot-svg-card');
+
+    if (textEl) textEl.innerHTML = html;
+    if (moodEl) moodEl.textContent = mood;
+
+    if (cardEl) {
+      if (stunt) {
+        cardEl.classList.remove('mascot-hop');
+        cardEl.classList.remove('mascot-stunt-active');
+        void cardEl.offsetWidth; // trigger reflow
+        cardEl.classList.add('mascot-stunt-active');
+        setTimeout(() => cardEl.classList.remove('mascot-stunt-active'), 1400);
+      } else {
+        cardEl.classList.remove('mascot-hop');
+        void cardEl.offsetWidth;
+        cardEl.classList.add('mascot-hop');
+        setTimeout(() => cardEl.classList.remove('mascot-hop'), 500);
+      }
+    }
+  }
+
+  function triggerRandomSassyQuote() {
+    playSoundChime('buzz');
+    const q = SASSY_QUOTES[quoteIdx % SASSY_QUOTES.length];
+    quoteIdx++;
+    setMascotSpeech(q, '🪰 SASSY QUIP', false);
+  }
+
+  let cubbonStuntDone = false;
+  function triggerCubbonNectarParty() {
+    // 1. Trigger 720° Corkscrew Stunt in 3D Sky
+    world.doStunt('barrel_roll', 2.8);
+
+    // 2. Play Audio Celebration
+    playSoundChime('chime');
+
+    // 3. Dopamine burst in Mushroom Body
+    mb.reward('cubbon', 1.0);
+    state.cue = 'cubbon';
+
+    // 4. Mascot celebration reaction & speech
+    setMascotSpeech(
+      `"🍯 <b>NECTAR OVERDOSE!</b> 100% Organic Bamboo Nectar hits different! Mushroom Body dopamine at <b>1.0 MAX</b>! Watch this 360° victory barrel roll!"`,
+      '🎉 SUGAR RUSH!',
+      true
+    );
+
+    // 5. Golden Flash FX
+    const flash = $('nectar-flash');
+    if (flash) {
+      flash.classList.add('show');
+      setTimeout(() => flash.classList.remove('show'), 650);
+    }
+
+    // 6. Terminal notification
+    say('nona', '🍯 NECTAR FIESTA! Cubbon Park sugar harvest! 720° acrobatic barrel roll initiated. +1.0 Dopamine burst!', 'good');
+  }
+
+  // Mascot UI Button bindings
+  if ($('btn-hunt-nectar')) {
+    $('btn-hunt-nectar').onclick = () => {
+      playSoundChime('buzz');
+      flyTo('cubbon');
+      setMascotSpeech(
+        `"Locking onto <b>Cubbon Park</b>! 100% organic bamboo nectar blossoms ahead! Get ready for the victory roll!"`,
+        '🚀 EN ROUTE',
+        false
+      );
+    };
+  }
+
+  if ($('btn-stunt-now')) {
+    $('btn-stunt-now').onclick = () => {
+      world.doStunt('barrel_roll', 2.8);
+      playSoundChime('chime');
+      setMascotSpeech(
+        `"Wheeeee! 720° Corkscrew barrel roll in action! Rate my aerobatics, human!"`,
+        '🔄 360° STUNT',
+        true
+      );
+    };
+  }
+
+  if ($('btn-mascot-talk')) {
+    $('btn-mascot-talk').onclick = () => triggerRandomSassyQuote();
+  }
+
+  if ($('mascot-avatar')) {
+    $('mascot-avatar').onclick = () => triggerRandomSassyQuote();
+  }
+
+  window.triggerCubbonNectarParty = triggerCubbonNectarParty;
+  window.triggerNectarRush = triggerCubbonNectarParty;
+  window.setMascotSpeech = setMascotSpeech;
+
 
   // Tactical GPS Mini-Map & Console Radar Instances
   const getFlyMapState = () => ({
@@ -692,6 +849,15 @@ async function boot() {
 
     // Telemetry & readouts
     const near = world.nearest();
+
+    // Cubbon Park Nectar Stunt Trigger (Triggers during both autopilot & manual navigation)
+    if (near && near.mark && near.mark.key === 'cubbon' && near.dist < 58 && !cubbonStuntDone) {
+      cubbonStuntDone = true;
+      triggerCubbonNectarParty();
+    } else if (near && near.mark && (near.mark.key !== 'cubbon' || near.dist > 120)) {
+      cubbonStuntDone = false;
+    }
+
     const headingDeg = h.strength > 0.1 ? `${(((h.theta * 180) / Math.PI + 360) % 360).toFixed(0)}°` : '—';
     if ($('near')) $('near').textContent = `${near.mark.label} · ${near.dist.toFixed(0)}m`;
     if ($('heading')) $('heading').textContent = headingDeg;
@@ -890,6 +1056,24 @@ ${scanLines}`
       const n = mb.teach(target, -1);
       state.cue = target;
       return { tone: 'bad', text: `Punishment signal. ${n.toLocaleString('en-US')} synapses depressed in avoidance compartments. "${target}" valence is now ${mb.valence(target).toFixed(2)}.` };
+    }
+
+    // 8.5. STUNT / NECTAR
+    if (cmd === 'stunt' || cmd === 'roll' || cmd === 'barrel_roll') {
+      world.doStunt('barrel_roll', 2.8);
+      playSoundChime('chime');
+      setMascotSpeech(
+        `"Wheeeee! 720° Corkscrew barrel roll in action! Rate my aerobatics, human!"`,
+        '🔄 360° STUNT',
+        true
+      );
+      return { tone: 'good', text: '🔄 720° Corkscrew barrel roll executed in Bangalore airspace!' };
+    }
+
+    if (cmd === 'nectar' || cmd === 'hunt_nectar' || cmd === 'sugar_rush') {
+      flyTo('cubbon');
+      setTimeout(() => triggerCubbonNectarParty(), 900);
+      return { tone: 'good', text: '🍯 Nectar mission engaged! Steering to Cubbon Park & triggering victory stunt.' };
     }
 
     // 9. LESION

@@ -82,6 +82,18 @@ function playFlyBuzz(duration = 0.35, pitch = 210) {
 
 // Curated code presets for teaching the connectome
 const CODE_PRESETS = {
+  nectar: `# 🍯 Cubbon Park Nectar Hunt & 360° Acrobatic Stunt!
+def hunt_nectar():
+    # 1. Teach connectome that Cubbon Park has sweet organic nectar!
+    teach("cubbon")
+    reward(1.0) # Maximum PAM Dopamine reinforcement
+    
+    # 2. Steer central-complex compass directly to Cubbon Park
+    fly_to("cubbon")
+    
+    # 3. Launch from desk into the 3D sky!
+    takeoff()
+`,
   patrol: `# 1. Python Autonomous Flight Routine
 # Teach Nona's 51,085 synapses how to think and fly!
 def mission_bangalore():
@@ -353,6 +365,12 @@ function translate(line) {
         return { phrase: 'takeoff', isTakeoff: true };
       case 'land_dock':
         return { phrase: 'go home' };
+      case 'hunt_nectar':
+        return { phrase: 'this is cubbon', then: 'good girl', isStunt: true };
+      case 'stunt':
+      case 'barrel_roll':
+      case 'corkscrew':
+        return { phrase: 'this is cubbon', isStunt: true };
       case 'forget':
       case 'reset':
         return { phrase: 'forget' };
@@ -593,6 +611,7 @@ export class Desk {
           </button>
           <div class="ide-presets">
             <span>Presets:</span>
+            <button class="preset-btn" data-snip="nectar">🍯 Nectar</button>
             <button class="preset-btn" data-snip="patrol">Patrol</button>
             <button class="preset-btn" data-snip="reflex">Reflex</button>
             <button class="preset-btn" data-snip="spiral">Spiral</button>
@@ -1234,6 +1253,13 @@ export class Desk {
         const r2 = this.runCommand(t.then);
         if (r2) {
           this._logToIde(r2.text, r2.tone || '');
+        }
+      }
+      if (t.isStunt) {
+        if (typeof window !== 'undefined' && window.triggerCubbonNectarParty) {
+          window.triggerCubbonNectarParty();
+        } else if (this.world && this.world.doStunt) {
+          this.world.doStunt('barrel_roll', 2.8);
         }
       }
       if (t.isTakeoff) {
