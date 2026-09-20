@@ -558,8 +558,22 @@ async function boot() {
     $('btn-mascot-talk').onclick = () => triggerRandomSassyQuote();
   }
 
+  if ($('mascot-close-btn')) {
+    $('mascot-close-btn').onclick = (e) => {
+      e.stopPropagation();
+      const b = $('mascot-bubble');
+      if (b) b.style.display = 'none';
+    };
+  }
+
   if ($('mascot-avatar')) {
-    $('mascot-avatar').onclick = () => triggerRandomSassyQuote();
+    $('mascot-avatar').onclick = () => {
+      const b = $('mascot-bubble');
+      if (b && b.style.display === 'none') {
+        b.style.display = '';
+      }
+      triggerRandomSassyQuote();
+    };
   }
 
   window.triggerCubbonNectarParty = triggerCubbonNectarParty;
@@ -1414,11 +1428,18 @@ ${scanLines}`
   // Panel Mode Tabs (Split / Full CMD Terminal / 3D Brain)
   const panel = $('panel');
   const modeTabs = document.querySelectorAll('.pm-tab');
+  let setBig = null;
+
   function setPanelMode(mode) {
     if (!panel) return;
     panel.classList.remove('mode-split', 'mode-terminal', 'mode-brain');
     panel.classList.add(`mode-${mode}`);
     modeTabs.forEach((tab) => tab.classList.toggle('active', tab.getAttribute('data-mode') === mode));
+    if (mode === 'brain') {
+      if (setBig) setBig(true);
+    } else {
+      if (setBig) setBig(false);
+    }
     resize();
   }
   modeTabs.forEach((tab) => {
@@ -1703,10 +1724,18 @@ ${scanLines}`
   // 3D Brain controls
   if (brain3d) {
     const wrap = $('brain-wrap');
-    const setBig = (on) => {
+    setBig = (on) => {
       wrap.classList.toggle('big', on);
+      document.body.classList.toggle('brain-fullscreen', on);
       $('brain-expand').innerHTML = on ? '&#10005;' : '&#9974;';
       $('brain-expand').title = on ? 'Close' : 'Expand';
+      if (!on) {
+        modeTabs.forEach((tab) => tab.classList.toggle('active', tab.getAttribute('data-mode') === 'split'));
+        if (panel) {
+          panel.classList.remove('mode-brain');
+          panel.classList.add('mode-split');
+        }
+      }
       requestAnimationFrame(() => requestAnimationFrame(resize));
     };
     $('brain-expand').onclick = () => setBig(!wrap.classList.contains('big'));
