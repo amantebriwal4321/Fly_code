@@ -513,6 +513,8 @@ async function boot() {
         false
       );
     };
+  }
+
   if ($('btn-avoid-traffic')) {
     $('btn-avoid-traffic').onclick = () => {
       playSoundChime('buzz');
