@@ -20,7 +20,7 @@ import { Brain3D, TYPE_COLOUR, TYPE_LABEL } from './brain3d.js?v=5';
 import { parse, makeListener, resolve } from './listen.js?v=5';
 import { Desk } from './desk.js?v=5';
 import { Room } from './room.js?v=5';
-import { TacticalMap } from './map.js?v=6';
+import { TacticalMap } from './map.js?v=7';
 
 const $ = (id) => document.getElementById(id);
 
@@ -621,6 +621,16 @@ async function boot() {
   if ($('mm-fold-btn')) $('mm-fold-btn').onclick = toggleFoldMiniMap;
   if ($('mm-status-pill')) $('mm-status-pill').onclick = toggleFoldMiniMap;
 
+  if ($('mm-traffic-btn')) {
+    $('mm-traffic-btn').onclick = () => {
+      if (miniMap) {
+        const on = miniMap.toggleTraffic();
+        $('mm-traffic-btn').style.opacity = on ? '1' : '0.45';
+        $('mm-traffic-btn').style.color = on ? '#b91c1c' : '#64748b';
+      }
+    };
+  }
+
   if ($('mm-mode-btn')) {
     $('mm-mode-btn').onclick = () => {
       if (miniMap) {
@@ -677,6 +687,14 @@ async function boot() {
       if (fullRadar) {
         fullRadar.centerOnFly = !fullRadar.centerOnFly;
         $('tab-map-center').textContent = fullRadar.centerOnFly ? 'Center' : 'City View';
+      }
+    };
+  }
+  if ($('tab-map-traffic')) {
+    $('tab-map-traffic').onclick = () => {
+      if (fullRadar) {
+        const on = fullRadar.toggleTraffic();
+        $('tab-map-traffic').style.opacity = on ? '1' : '0.45';
       }
     };
   }

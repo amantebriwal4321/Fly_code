@@ -6,12 +6,12 @@
 import * as THREE from 'three';
 
 export const LANDMARKS = [
-  { key: 'home', label: '2586Labs', sub: '100 Feet Road, Indiranagar', pos: [0, 14, 0], colour: 0xffa439, home: true },
-  { key: 'cubbon', label: 'Cubbon Park', sub: 'trees, shade, quiet', pos: [-120, 8, -90], colour: 0x48b865 },
-  { key: 'vidhana', label: 'Vidhana Soudha', sub: 'grand legislative palace', pos: [-70, 30, -190], colour: 0xded8c7 },
-  { key: 'ubcity', label: 'UB City', sub: 'luxury glass tower', pos: [95, 46, -150], colour: 0x4aa5f0 },
-  { key: 'lalbagh', label: 'Lalbagh', sub: 'glasshouse & botanical gardens', pos: [150, 10, 120], colour: 0xe0488e },
-  { key: 'traffic', label: '100 Feet Road', sub: 'traffic, autos, cafes', pos: [-40, 6, 140], colour: 0xf05030 },
+  { key: 'home', label: '2586Labs', sub: '100 Feet Rd · ೨೫೮೬ ಲ್ಯಾಬ್ಸ್', pos: [0, 14, 0], colour: 0xffa439, home: true },
+  { key: 'cubbon', label: 'Cubbon Park', sub: 'ಕಬ್ಬನ್ ಪಾರ್ಕ್ · trees & shade', pos: [-120, 8, -90], colour: 0x48b865 },
+  { key: 'vidhana', label: 'Vidhana Soudha', sub: 'ವಿಧಾನ ಸೌಧ · legislative palace', pos: [-70, 30, -190], colour: 0xded8c7 },
+  { key: 'ubcity', label: 'UB City', sub: 'ಯುಬಿ ಸಿಟಿ · luxury tower', pos: [95, 46, -150], colour: 0x4aa5f0 },
+  { key: 'lalbagh', label: 'Lalbagh', sub: 'ಲಾಲ್ ಬಾಗ್ · botanical glasshouse', pos: [150, 10, 120], colour: 0xe0488e },
+  { key: 'traffic', label: '100 Feet Road', sub: '೧೦೦ ಅಡಿ ರಸ್ತೆ · autos & traffic', pos: [-40, 6, 140], colour: 0xf05030 },
 ];
 
 /** Floating 3D nameplate badge facing camera */
@@ -91,6 +91,7 @@ export class World {
     this._landmarks();
     this._city();
     this._traffic();
+    this._metro();
     this._fly();
     this._bindControls();
   }
@@ -557,46 +558,188 @@ export class World {
   }
 
   _traffic() {
-    // Dynamic animated vehicles on 100 Feet Road
+    // Dynamic animated Bengaluru traffic (100 Feet Road + Cross streets)
     this.vehicles = [];
-    const autoMat = new THREE.MeshStandardMaterial({ color: 0x36a64f, roughness: 0.5 }); // Green auto body
-    const yellowTop = new THREE.MeshStandardMaterial({ color: 0xffd000, roughness: 0.4 }); // Yellow hood
-    const busMat = new THREE.MeshStandardMaterial({ color: 0x1f74ba, roughness: 0.5 }); // BMTC blue
-    const carMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4 });
+    const autoBodyMat = new THREE.MeshStandardMaterial({ color: 0x16a34a, roughness: 0.5 }); // Green auto body
+    const autoRoofMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.35 }); // Yellow hood canopy
+    const busBlueMat = new THREE.MeshStandardMaterial({ color: 0x1d4ed8, roughness: 0.5 }); // BMTC Royal Blue
+    const busWhiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4 });
+    const carMatWhite = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.4 });
+    const carMatSilver = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.4, roughness: 0.3 });
+    const carMatRed = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.4 });
+    const glassMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.1 });
+    const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9 });
+    const headlampMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+    const tailMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
 
-    const nCars = 18;
+    // 1. 100 Feet Road Traffic (Northbound lane x = -46, Southbound lane x = -34)
+    const nCars = 34;
     for (let i = 0; i < nCars; i++) {
       const isAuto = i % 3 === 0;
-      const isBus = i % 5 === 0;
-      const lane = i % 2 === 0 ? -46 : -34; // Northbound vs Southbound lane
+      const isBus = i % 6 === 0;
+      const isBike = !isAuto && !isBus && i % 4 === 0;
+      const lane = i % 2 === 0 ? -46 : -34;
       const dir = lane < -40 ? 1 : -1;
-      const speed = isBus ? 22 : isAuto ? 28 : 36;
+      const speed = isBus ? 22 : isAuto ? 28 : isBike ? 38 : 34;
       const zStart = (i / nCars) * 1600 - 800;
 
       const vGroup = new THREE.Group();
       if (isAuto) {
         // Bangalore Auto Rickshaw!
-        const body = new THREE.Mesh(new THREE.BoxGeometry(3.2, 2.2, 4.4), autoMat);
+        const body = new THREE.Mesh(new THREE.BoxGeometry(3.2, 2.0, 4.2), autoBodyMat);
         body.position.y = 1.3;
-        const hood = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.2, 3.8), yellowTop);
-        hood.position.set(0, 2.8, -0.2);
-        vGroup.add(body, hood);
+        const hood = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.4, 3.2), autoRoofMat);
+        hood.position.set(0, 2.7, -0.4);
+        const windshield = new THREE.Mesh(new THREE.BoxGeometry(2.8, 1.1, 0.4), glassMat);
+        windshield.position.set(0, 2.5, 1.3);
+        const headlamp = new THREE.Mesh(new THREE.SphereGeometry(0.35, 8, 8), headlampMat);
+        headlamp.position.set(0, 1.4, 2.15);
+        // 3 Wheels
+        const w1 = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.4, 8), wheelMat);
+        w1.rotation.z = Math.PI / 2;
+        w1.position.set(0, 0.5, 1.4);
+        const w2 = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.4, 8), wheelMat);
+        w2.rotation.z = Math.PI / 2;
+        w2.position.set(-1.4, 0.5, -1.2);
+        const w3 = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.4, 8), wheelMat);
+        w3.rotation.z = Math.PI / 2;
+        w3.position.set(1.4, 0.5, -1.2);
+        vGroup.add(body, hood, windshield, headlamp, w1, w2, w3);
+
       } else if (isBus) {
         // BMTC Bangalore Bus!
-        const bus = new THREE.Mesh(new THREE.BoxGeometry(4.4, 4.6, 14), busMat);
-        bus.position.y = 2.4;
-        vGroup.add(bus);
+        const bus = new THREE.Mesh(new THREE.BoxGeometry(4.6, 4.6, 14), busBlueMat);
+        bus.position.y = 2.5;
+        const roof = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.6, 13.6), busWhiteMat);
+        roof.position.set(0, 4.9, 0);
+        const hl1 = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.4, 0.2), headlampMat);
+        hl1.position.set(-1.6, 1.5, 7.05);
+        const hl2 = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.4, 0.2), headlampMat);
+        hl2.position.set(1.6, 1.5, 7.05);
+        const tl1 = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.4, 0.2), tailMat);
+        tl1.position.set(-1.6, 1.5, -7.05);
+        const tl2 = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.4, 0.2), tailMat);
+        tl2.position.set(1.6, 1.5, -7.05);
+        vGroup.add(bus, roof, hl1, hl2, tl1, tl2);
+
+      } else if (isBike) {
+        // Nimble two-wheeler
+        const frame = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.4, 2.6), glassMat);
+        frame.position.y = 1.0;
+        const hl = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 8), headlampMat);
+        hl.position.set(0, 1.4, 1.35);
+        vGroup.add(frame, hl);
+
       } else {
-        // City Car
-        const car = new THREE.Mesh(new THREE.BoxGeometry(3.8, 2.2, 6.5), carMat);
-        car.position.y = 1.2;
-        vGroup.add(car);
+        // City Car / Cab
+        const carC = i % 2 === 0 ? carMatWhite : (i % 5 === 0 ? carMatRed : carMatSilver);
+        const car = new THREE.Mesh(new THREE.BoxGeometry(3.8, 2.2, 6.5), carC);
+        car.position.y = 1.3;
+        const cabGlass = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.2, 3.4), glassMat);
+        cabGlass.position.set(0, 2.5, -0.4);
+        const hl1 = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.3, 0.2), headlampMat);
+        hl1.position.set(-1.4, 1.2, 3.3);
+        const hl2 = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.3, 0.2), headlampMat);
+        hl2.position.set(1.4, 1.2, 3.3);
+        vGroup.add(car, cabGlass, hl1, hl2);
       }
 
+      if (dir < 0) vGroup.rotation.y = Math.PI;
       vGroup.position.set(lane, 0, zStart);
       this.scene.add(vGroup);
-      this.vehicles.push({ group: vGroup, speed: speed * dir, dir, lane });
+      this.vehicles.push({ group: vGroup, speed: speed * dir, dir, lane, axis: 'z' });
     }
+
+    // 2. Cross-Street Traffic on CMH Road (z = -160, East-West)
+    const nCross = 12;
+    for (let j = 0; j < nCross; j++) {
+      const isEast = j % 2 === 0;
+      const laneZ = isEast ? -155 : -165;
+      const dir = isEast ? 1 : -1;
+      const isAuto = j % 3 === 0;
+      const vGroup = new THREE.Group();
+      if (isAuto) {
+        const body = new THREE.Mesh(new THREE.BoxGeometry(4.2, 2.0, 3.2), autoBodyMat);
+        body.position.y = 1.3;
+        const hood = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.4, 3.2), autoRoofMat);
+        hood.position.set(-0.4, 2.7, 0);
+        vGroup.add(body, hood);
+      } else {
+        const car = new THREE.Mesh(new THREE.BoxGeometry(6.5, 2.2, 3.8), carMatWhite);
+        car.position.y = 1.3;
+        vGroup.add(car);
+      }
+      if (dir < 0) vGroup.rotation.y = Math.PI;
+      vGroup.position.set((j / nCross) * 1600 - 800, 0, laneZ);
+      this.scene.add(vGroup);
+      this.vehicles.push({ group: vGroup, speed: 28 * dir, dir, laneZ, axis: 'x' });
+    }
+  }
+
+  _metro() {
+    // Elevated Namma Metro Purple Line Viaduct along z = -160
+    const metroGroup = new THREE.Group();
+    const concreteMat = new THREE.MeshStandardMaterial({ color: 0x828b98, roughness: 0.85 });
+    const purpleMat = new THREE.MeshStandardMaterial({ color: 0x9333ea, roughness: 0.4 });
+    const silverMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.5, roughness: 0.3 });
+    const glassMat = new THREE.MeshStandardMaterial({ color: 0x1e1b4b, roughness: 0.1 });
+    const headlampMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+
+    // 1. Viaduct Concrete Pillars
+    for (let x = -800; x <= 800; x += 75) {
+      const pier = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.8, 22, 12), concreteMat);
+      pier.position.set(x, 11, -160);
+      const cap = new THREE.Mesh(new THREE.BoxGeometry(10, 2.2, 14), concreteMat);
+      cap.position.set(x, 22, -160);
+      metroGroup.add(pier, cap);
+    }
+
+    // 2. Viaduct Deck & Safety Parapets
+    const deck = new THREE.Mesh(new THREE.BoxGeometry(1800, 2.0, 11), concreteMat);
+    deck.position.set(0, 22.5, -160);
+    const parapetN = new THREE.Mesh(new THREE.BoxGeometry(1800, 1.8, 0.8), purpleMat);
+    parapetN.position.set(0, 23.8, -160 - 5.1);
+    const parapetS = new THREE.Mesh(new THREE.BoxGeometry(1800, 1.8, 0.8), purpleMat);
+    parapetS.position.set(0, 23.8, -160 + 5.1);
+    metroGroup.add(deck, parapetN, parapetS);
+
+    // 3. Indiranagar Elevated Metro Station Canopy (x = 60, z = -160)
+    const stCanopy = new THREE.Mesh(
+      new THREE.CylinderGeometry(15, 15, 60, 16, 1, true, 0, Math.PI),
+      new THREE.MeshStandardMaterial({ color: 0x7c3aed, roughness: 0.35, side: THREE.DoubleSide })
+    );
+    stCanopy.rotation.z = Math.PI / 2;
+    stCanopy.position.set(60, 27, -160);
+    metroGroup.add(stCanopy);
+
+    this.scene.add(metroGroup);
+
+    // 4. Animated 3-car Namma Metro Train!
+    this.metroTrain = new THREE.Group();
+    this.metroSpeed = 46;
+
+    for (let c = -1; c <= 1; c++) {
+      const coach = new THREE.Group();
+      const carBody = new THREE.Mesh(new THREE.BoxGeometry(20, 4.2, 4.6), silverMat);
+      carBody.position.y = 2.4;
+      const purpleStripe = new THREE.Mesh(new THREE.BoxGeometry(20.05, 1.2, 4.65), purpleMat);
+      purpleStripe.position.y = 2.4;
+      const windows = new THREE.Mesh(new THREE.BoxGeometry(18, 1.3, 4.7), glassMat);
+      windows.position.y = 3.2;
+      coach.add(carBody, purpleStripe, windows);
+      coach.position.x = c * 22;
+      this.metroTrain.add(coach);
+    }
+
+    // Front headlights
+    const hl1 = new THREE.Mesh(new THREE.SphereGeometry(0.5, 8, 8), headlampMat);
+    hl1.position.set(34, 2.2, -1.6);
+    const hl2 = new THREE.Mesh(new THREE.SphereGeometry(0.5, 8, 8), headlampMat);
+    hl2.position.set(34, 2.2, 1.6);
+    this.metroTrain.add(hl1, hl2);
+
+    this.metroTrain.position.set(0, 23.6, -160);
+    this.scene.add(this.metroTrain);
   }
 
   _fly() {
@@ -885,13 +1028,25 @@ export class World {
     this.trailGeo.setDrawRange(0, this.trail.length);
     this.trailGeo.attributes.position.needsUpdate = true;
 
-    // Update traffic animation
+    // Update traffic animation (100 Feet Road + CMH Cross-Street)
     if (this.vehicles) {
       for (const v of this.vehicles) {
-        v.group.position.z += v.speed * dt;
-        if (v.group.position.z > 800) v.group.position.z = -800;
-        if (v.group.position.z < -800) v.group.position.z = 800;
+        if (v.axis === 'x') {
+          v.group.position.x += v.speed * dt;
+          if (v.group.position.x > 800) v.group.position.x = -800;
+          if (v.group.position.x < -800) v.group.position.x = 800;
+        } else {
+          v.group.position.z += v.speed * dt;
+          if (v.group.position.z > 800) v.group.position.z = -800;
+          if (v.group.position.z < -800) v.group.position.z = 800;
+        }
       }
+    }
+
+    // Update Namma Metro train animation
+    if (this.metroTrain) {
+      this.metroTrain.position.x += this.metroSpeed * dt;
+      if (this.metroTrain.position.x > 850) this.metroTrain.position.x = -850;
     }
 
     // Drifting clouds

@@ -709,12 +709,12 @@ export class Desk {
     desktop.appendChild(brainWin.el);
 
     // 5. City Radar Window
-    const radarWin = this._createWindow('radar', 'City_Radar.exe', 120, 100, 480, 350, `
+    const radarWin = this._createWindow('radar', 'Bengaluru_Radar.exe', 120, 100, 480, 350, `
       <div class="win-body radar-body">
         <div class="radar-canvas-wrap">
           <canvas class="radar-canvas" width="440" height="220"></canvas>
         </div>
-        <div class="radar-info" id="radar-info">Tracking Bangalore airspace...</div>
+        <div class="radar-info" id="radar-info">📍 Bengaluru Airspace · Namma Metro & Live Traffic Active</div>
       </div>
     `);
     desktop.appendChild(radarWin.el);

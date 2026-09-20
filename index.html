@@ -1343,9 +1343,10 @@
       <div class="mm-header">
         <div class="mm-status" id="mm-status-pill" title="Toggle Collapse Mini-Map (M)">
           <span class="mm-dot"></span>
-          <span class="mm-title">GPS AIRSPACE</span>
+          <span class="mm-title">📍 BENGALURU GPS</span>
         </div>
         <div class="mm-tools">
+          <button class="mm-tool-btn" id="mm-traffic-btn" title="Toggle Live Traffic & Silk Board Heatmap (T)" style="color:#b91c1c; font-weight:700;">🚦 TRAF</button>
           <button class="mm-tool-btn" id="mm-mode-btn" title="Toggle North-Up vs Heading-Up (N)">N-UP</button>
           <button class="mm-tool-btn" id="mm-zoom-out" title="Zoom Out (-)">-</button>
           <button class="mm-tool-btn" id="mm-zoom-in" title="Zoom In (+)">+</button>
@@ -1360,6 +1361,10 @@
         <div class="mm-footer">
           <span id="mm-coords">X: 0m · Z: 0m · ALT: 88m</span>
           <span id="mm-target">LOCK: NONE</span>
+        </div>
+        <div class="mm-sub-footer" id="mm-traffic-bar" style="display:flex; justify-content:space-between; padding:3px 8px; font:600 8.5px monospace; background:rgba(254,242,242,0.85); border-top:1px solid rgba(254,202,202,0.6); color:#991b1b;">
+          <span>🚦 BLR: 87% PEAK</span>
+          <span>⚠️ SILK BOARD: JAMMED</span>
         </div>
       </div>
     </div>
@@ -1682,9 +1687,10 @@
         <div class="radar-tab-header">
           <div class="rth-title">
             <span class="term-dot green"></span>
-            <span>AIRSPACE RADAR</span>
+            <span>📍 BENGALURU GPS & TRAFFIC</span>
           </div>
           <div class="rth-tools">
+            <button class="sec-btn rth-btn" id="tab-map-traffic" title="Toggle Live Traffic & Silk Board Bottleneck">🚦 TRAF</button>
             <button class="sec-btn rth-btn" id="tab-map-mode" title="Toggle North-Up / Heading-Up">N-UP</button>
             <button class="sec-btn rth-btn" id="tab-map-zoom-out" title="Zoom Out">-</button>
             <button class="sec-btn rth-btn" id="tab-map-zoom-in" title="Zoom In">+</button>
@@ -1695,7 +1701,7 @@
           <canvas id="radar-canvas-full" width="370" height="250"></canvas>
         </div>
         <div class="radar-tab-waypoints">
-          <div class="rtw-header">BANGALORE LANDMARKS & AUTOPILOT WAYPOINTS</div>
+          <div class="rtw-header">BENGALURU LANDMARKS, TRAFFIC & AUTOPILOT WAYPOINTS</div>
           <div class="rtw-list" id="rtw-list"></div>
         </div>
       </div>
@@ -1801,6 +1807,6 @@
   }
 }
 </script>
-<script type="module" src="./src/main.js?v=6"></script>
+<script type="module" src="./src/main.js?v=7"></script>
 </body>
 </html>
