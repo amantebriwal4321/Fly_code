@@ -1,0 +1,21 @@
+# secrets - NEVER commit
+.env
+*.token
+
+# python
+venv/
+__pycache__/
+*.pyc
+
+# connectome data (huge - 1.1GB+)
+data/
+*.feather
+*.parquet
+*.swc
+
+# ide & dependencies
+.claude/
+node_modules/
+dist/
+.DS_Store
+

@@ -1,0 +1,1346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Nona — Drosophila Connectome Controller</title>
+<style>
+  :root {
+    --bg: #05070b;
+    --panel: rgba(9, 12, 18, 0.90);
+    --line: #1e2633;
+    --line-light: rgba(255, 255, 255, 0.08);
+    --ink: #e8edf5;
+    --dim: #8a97ab;
+    --faint: #5a6579;
+    --accent: #ffc55c;
+    --accent-dim: #9a7a3c;
+    --cyan: #38bdf8;
+    --green: #48d888;
+    --pink: #ff5e84;
+    --blue: #2a7be6;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font: 13px/1.5 ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  #app { display: grid; grid-template-columns: 1fr 410px; grid-template-rows: 100vh; height: 100vh; overflow: hidden; }
+  @media (max-width: 980px) { #app { grid-template-columns: 1fr; grid-template-rows: 1fr 48vh; } }
+
+  /* ---- stage ---- */
+  #stage { position: relative; overflow: hidden; min-height: 0; background: #bfe1f8; }
+  #scene { display: block; width: 100%; height: 100%; }
+
+  .overlay { position: absolute; pointer-events: none; }
+  #title {
+    top: 20px; left: 24px;
+    background: rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    padding: 12px 18px; border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 40, 80, 0.08);
+    color: #1a2333;
+    pointer-events: auto;
+  }
+  #title h1 {
+    margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.02em;
+    display: flex; align-items: baseline; gap: 10px; color: #0b1526;
+  }
+  #title h1 span { font-size: 11px; font-weight: 600; color: #2d73c7; letter-spacing: 0.06em; text-transform: uppercase; }
+  #title p { margin: 5px 0 0; font-size: 12.5px; color: #4b586e; max-width: 48ch; line-height: 1.45; }
+
+  /* Flight Top HUD & Mode Pill */
+  #flight-hud {
+    top: 20px; right: 24px; display: flex; gap: 8px; pointer-events: auto;
+  }
+  .hud-pill {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 8px 14px; border-radius: 24px;
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    color: #1a2233; font: 600 12px ui-sans-serif, system-ui, sans-serif;
+    box-shadow: 0 4px 16px rgba(0, 30, 70, 0.08);
+    cursor: pointer; transition: all 0.15s ease;
+  }
+  .hud-pill:hover {
+    background: #ffffff; transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(0, 30, 70, 0.14);
+  }
+  .hud-pill kbd {
+    background: #e6edf5; border: 1px solid #ccd8e6; border-radius: 4px;
+    padding: 1px 5px; font: 600 10px monospace; color: #475a72;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .dot.auto { background: #0ea5e9; box-shadow: 0 0 8px #0ea5e9; }
+  .dot.manual { background: #10b981; box-shadow: 0 0 10px #10b981; }
+
+  /* Quick Destination Bar */
+  #dest-bar {
+    left: 24px; bottom: 76px; pointer-events: auto;
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    border-radius: 12px; padding: 6px 10px;
+    box-shadow: 0 4px 16px rgba(0, 40, 80, 0.08);
+  }
+  .dest-label { font: 700 10px ui-sans-serif, system-ui; color: #64748b; text-transform: uppercase; letter-spacing: 0.06em; margin-right: 2px; }
+  .dest-btn {
+    background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px;
+    padding: 4px 9px; font: 600 11px ui-sans-serif, system-ui; color: #1e40af;
+    cursor: pointer; transition: all 0.15s ease;
+  }
+  .dest-btn:hover {
+    background: #dbeafe; border-color: #93c5fd; transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.2);
+  }
+  .dest-btn.active {
+    background: linear-gradient(135deg, #0284c7, #0ea5e9) !important;
+    border-color: #38bdf8 !important; color: #ffffff !important;
+    box-shadow: 0 0 12px rgba(14, 165, 233, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.4) !important;
+    font-weight: 700 !important; transform: translateY(-1px);
+  }
+
+  /* Controls Guide Overlay */
+  #flight-guide {
+    left: 24px; bottom: 124px; pointer-events: auto;
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    border-radius: 12px; padding: 8px 12px;
+    box-shadow: 0 6px 20px rgba(0, 40, 80, 0.08);
+    display: flex; flex-direction: column; gap: 6px;
+    max-width: 280px;
+  }
+  .fg-steer-btns { display: flex; gap: 6px; }
+  .fg-btn {
+    flex: 1; padding: 6px 10px; font: 700 11px ui-sans-serif, system-ui;
+    background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; color: #0f172a;
+    cursor: pointer; user-select: none; transition: all 0.1s ease;
+  }
+  .fg-btn:hover { background: #e2e8f0; }
+  .fg-btn:active { background: #cbd5e1; transform: scale(0.96); }
+  .fg-hint { font: 400 10.5px/1.3 ui-sans-serif, system-ui; color: #64748b; }
+  .fg-hint kbd {
+    background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 3px;
+    padding: 1px 4px; font: 600 9.5px monospace; color: #1e293b;
+  }
+
+  #readouts {
+    bottom: 20px; left: 24px; display: flex; gap: 24px;
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    padding: 10px 18px; border-radius: 12px;
+    box-shadow: 0 6px 24px rgba(0, 40, 80, 0.08);
+    font: 500 11.5px/1.3 ui-monospace, "SF Mono", Menlo, monospace;
+    pointer-events: auto;
+  }
+  #readouts div span { display: block; color: #64748b; font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 2px; }
+  #readouts b { font-weight: 700; color: #0f172a; font-size: 13.5px; }
+
+  /* Dusk Theme HUD Overrides (Fluctfly Obsidian Style) */
+  body.theme-dusk #title,
+  body.theme-dusk .hud-pill,
+  body.theme-dusk #dest-bar,
+  body.theme-dusk #flight-guide,
+  body.theme-dusk #readouts {
+    background: rgba(8, 12, 18, 0.90) !important;
+    border-color: #1e2633 !important;
+    color: #e6edf7 !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6) !important;
+  }
+  body.theme-dusk #title h1 { color: #f1f5f9 !important; }
+  body.theme-dusk #title p { color: #8a97ab !important; }
+  body.theme-dusk .fg-btn {
+    background: #141924 !important;
+    border-color: #222c3c !important;
+    color: #f1f5f9 !important;
+  }
+  body.theme-dusk .fg-btn:hover { background: #1e2633 !important; }
+  body.theme-dusk .dest-btn {
+    background: #111722 !important;
+    border-color: #1e2633 !important;
+    color: #cbd5e1 !important;
+  }
+  body.theme-dusk .dest-btn:hover {
+    background: #1c2433 !important;
+    border-color: #ffc55c !important;
+    color: #ffc55c !important;
+  }
+  body.theme-dusk #readouts b { color: #ffc55c !important; }
+  body.theme-dusk .hud-pill kbd, body.theme-dusk .fg-hint kbd {
+    background: #141924 !important;
+  }
+  /* =========================================================================
+     TACTICAL GPS AIRSPACE MINI-MAP HUD
+     ========================================================================= */
+  #minimap-card {
+    top: 68px; right: 24px;
+    width: 252px;
+    background: rgba(255, 255, 255, 0.90);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 30, 70, 0.12);
+    display: flex; flex-direction: column; overflow: hidden;
+    pointer-events: auto;
+    z-index: 25;
+    transition: width 0.22s ease, height 0.22s ease, transform 0.2s ease, opacity 0.2s ease;
+  }
+  #minimap-card.maximized {
+    width: min(500px, calc(100vw - 460px)) !important;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4) !important;
+  }
+  #minimap-card.maximized #minimap-canvas {
+    width: 100% !important;
+    height: 420px !important;
+  }
+  #minimap-card.folded .mm-body {
+    display: none !important;
+  }
+  #minimap-card.folded {
+    width: auto !important;
+    border-radius: 20px !important;
+  }
+
+  .mm-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 10px; background: rgba(240, 246, 255, 0.75);
+    border-bottom: 1px solid rgba(200, 220, 245, 0.6);
+  }
+  .mm-status { display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; }
+  .mm-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #10b981; box-shadow: 0 0 8px #10b981;
+    animation: mmPulse 1.8s infinite;
+  }
+  @keyframes mmPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.85); }
+  }
+  .mm-title {
+    font: 700 9.5px ui-sans-serif, system-ui;
+    color: #1e3a8a; letter-spacing: 0.08em;
+  }
+  .mm-tools { display: flex; align-items: center; gap: 3px; }
+  .mm-tool-btn {
+    background: #ffffff; border: 1px solid #cbd5e1; border-radius: 4px;
+    padding: 2px 6px; font: 600 9px monospace; color: #334155;
+    cursor: pointer; transition: all 0.12s ease;
+  }
+  .mm-tool-btn:hover { background: #f1f5f9; color: #0284c7; border-color: #93c5fd; }
+  .mm-tool-btn:active { transform: scale(0.95); }
+
+  .mm-body { display: flex; flex-direction: column; }
+  .mm-canvas-wrap {
+    background: #030810; position: relative;
+    display: flex; justify-content: center; align-items: center;
+  }
+  #minimap-canvas {
+    display: block; width: 250px; height: 230px;
+    cursor: crosshair;
+  }
+  .mm-footer {
+    padding: 5px 8px; background: rgba(240, 246, 255, 0.85);
+    border-top: 1px solid rgba(200, 220, 245, 0.6);
+    display: flex; justify-content: space-between; align-items: center;
+    font: 600 9px ui-monospace, monospace; color: #475569;
+  }
+  #mm-target { color: #0284c7; font-weight: 700; }
+
+  /* Dusk Mode Overrides for Mini-Map */
+  body.theme-dusk #minimap-card {
+    background: rgba(8, 12, 18, 0.94) !important;
+    border-color: #1e2633 !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.75) !important;
+  }
+  body.theme-dusk .mm-header, body.theme-dusk .mm-footer {
+    background: rgba(14, 18, 26, 0.9) !important;
+    border-color: #1e2633 !important;
+    color: #94a3b8 !important;
+  }
+  body.theme-dusk .mm-title { color: #ffc55c !important; }
+  body.theme-dusk .mm-tool-btn {
+    background: #141924 !important; border-color: #222c3c !important;
+    color: #cbd5e1 !important;
+  }
+  body.theme-dusk .mm-tool-btn:hover {
+    background: #1e2633 !important; color: #ffc55c !important;
+    border-color: #ffc55c !important;
+  }
+  body.theme-dusk #mm-target { color: #ffc55c !important; }
+
+  /* =========================================================================
+     RADAR MAP TAB IN CONSOLE
+     ========================================================================= */
+  #tab-map {
+    display: none; flex-direction: column; flex: 1; min-height: 0;
+    overflow-y: auto; background: #05070b;
+  }
+  #tab-map.active { display: flex; }
+  .radar-tab-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 12px; background: #080c14; border-bottom: 1px solid var(--line);
+  }
+  .rth-title {
+    display: flex; align-items: center; gap: 7px;
+    font: 700 10px ui-monospace, monospace; color: var(--accent);
+    letter-spacing: 0.1em;
+  }
+  .rth-tools { display: flex; gap: 4px; }
+  .rth-btn { padding: 3px 8px !important; font-size: 9.5px !important; }
+
+  .radar-tab-canvas-wrap {
+    padding: 8px; background: #03060c; display: flex;
+    justify-content: center; align-items: center; border-bottom: 1px solid var(--line);
+  }
+  #radar-canvas-full {
+    display: block; width: 100%; height: 250px;
+    border-radius: 8px; border: 1px solid #141c2c;
+  }
+
+  .radar-tab-waypoints {
+    padding: 10px 12px; display: flex; flex-direction: column; gap: 6px;
+    flex: 1;
+  }
+  .rtw-header {
+    font: 700 8.5px ui-monospace, monospace; letter-spacing: 0.16em;
+    color: var(--faint); text-transform: uppercase; margin-bottom: 4px;
+  }
+  .rtw-list { display: flex; flex-direction: column; gap: 6px; }
+  .rtw-card {
+    background: #0d121b; border: 1px solid var(--line); border-radius: 6px;
+    padding: 8px 10px; display: grid; grid-template-columns: auto 1fr auto;
+    align-items: center; gap: 10px; transition: all 0.15s ease;
+  }
+  .rtw-card:hover {
+    border-color: var(--accent-dim); background: #111722;
+  }
+  .rtw-card.active {
+    border-color: var(--accent) !important;
+    background: rgba(255, 197, 92, 0.08) !important;
+    box-shadow: 0 0 12px rgba(255, 197, 92, 0.15);
+  }
+  .rtw-icon { font-size: 20px; }
+  .rtw-info { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  .rtw-name {
+    font: 700 11px ui-sans-serif, system-ui; color: var(--ink);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .rtw-sub { font: 400 9.5px ui-monospace, monospace; color: var(--dim); }
+  .rtw-stats { font: 500 9px monospace; color: var(--cyan); margin-top: 2px; }
+  .rtw-btn {
+    background: linear-gradient(135deg, #0284c7, #0ea5e9);
+    border: 1px solid #38bdf8; color: #ffffff;
+    font: 700 10px ui-sans-serif; border-radius: 4px;
+    padding: 5px 9px; cursor: pointer; white-space: nowrap;
+    transition: all 0.12s ease;
+  }
+  .rtw-btn:hover { filter: brightness(1.15); transform: translateY(-1px); }
+  .rtw-card.active .rtw-btn {
+    background: var(--accent); border-color: var(--accent); color: #000000;
+  }
+
+  /* ---- panel ---- */
+  #panel {
+    background: var(--panel); border-left: 1px solid var(--line);
+    display: flex; flex-direction: column; min-height: 0;
+    z-index: 10; height: 100%; overflow: hidden;
+    color: var(--ink);
+  }
+
+  /* Fluctfly Masthead */
+  #masthead {
+    padding: 12px 14px 10px;
+    background: rgba(6, 9, 15, 0.95);
+    border-bottom: 1px solid var(--line);
+    flex-shrink: 0;
+  }
+  .mast-title-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .mast-brand { display: flex; align-items: center; gap: 7px; }
+  .mast-dot { width: 7px; height: 7px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px #10b981; }
+  #masthead h1 {
+    margin: 0; font-size: 14px; font-weight: 700;
+    letter-spacing: .38em; color: var(--accent);
+  }
+  .mast-badge {
+    font-size: 8.5px; padding: 1px 5px; border-radius: 3px;
+    background: rgba(255, 197, 92, 0.12); color: var(--accent);
+    border: 1px solid rgba(255, 197, 92, 0.3); font-weight: 600;
+  }
+  #masthead .sub { margin: 3px 0 0; color: var(--dim); font-size: 10px; letter-spacing: .02em; }
+  #masthead .sub i { font-style: italic; }
+
+  .stats { display: flex; flex-wrap: wrap; gap: 14px; margin: 8px 0 0; padding: 0; }
+  .stats div { margin: 0; }
+  .stats dt { color: var(--faint); font-size: 8px; letter-spacing: .18em; text-transform: uppercase; }
+  .stats dd { margin: 1px 0 0; font-size: 13px; font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink); }
+  #stat-lit { color: var(--accent); }
+
+  /* Mode Switcher Tabs */
+  .panel-mode-tabs { display: flex; gap: 3px; }
+  .pm-tab {
+    padding: 2px 6px; font: 600 9px ui-monospace, Menlo, monospace;
+    background: rgba(255, 255, 255, 0.04); border: 1px solid var(--line);
+    border-radius: 4px; color: var(--dim); cursor: pointer; transition: all 0.15s ease;
+  }
+  .pm-tab:hover { background: rgba(255, 255, 255, 0.1); color: #ffffff; }
+  .pm-tab.active {
+    background: rgba(255, 197, 92, 0.15) !important; border-color: var(--accent) !important;
+    color: var(--accent) !important; box-shadow: 0 0 8px rgba(255, 197, 92, 0.25);
+  }
+
+  /* Mode Layout Rules */
+  #panel.mode-terminal #brain-wrap { display: none !important; }
+  #panel.mode-terminal .console-box { flex: 1; min-height: 0; }
+
+  #panel.mode-brain .console-box { display: none !important; }
+  #panel.mode-brain #brain-wrap { height: 100% !important; flex: 1; max-height: none; }
+
+  #panel.mode-split #brain-wrap { height: 170px; flex-shrink: 0; }
+  #panel.mode-split .console-box { flex: 1; min-height: 220px; }
+
+  /* ---- 3D brain ---- */
+  #brain-wrap { position: relative; height: 170px; border-bottom: 1px solid var(--line); flex-shrink: 0; background: #030508; }
+  #brain3d { display: block; width: 100%; height: 100%; }
+  #brain-wrap.big {
+    position: fixed; inset: 0; z-index: 70; height: auto;
+    background: #030508; border: 0;
+  }
+  #brain-tools { position: absolute; top: 8px; right: 8px; display: flex; gap: 5px; z-index: 5; }
+  #brain-tools button {
+    padding: 3px 7px; font-size: 10px;
+    background: rgba(10, 13, 20, 0.85); backdrop-filter: blur(6px);
+    border: 1px solid var(--line); border-radius: 4px; color: var(--dim); cursor: pointer;
+  }
+  #brain-tools button:hover { color: var(--ink); border-color: var(--accent-dim); }
+  #brain-cap {
+    position: absolute; left: 10px; bottom: 6px; right: 10px;
+    font: 400 9px/1.4 ui-monospace, Menlo, monospace; color: var(--faint);
+    pointer-events: none; z-index: 5;
+  }
+  #brain-types {
+    position: absolute; left: 10px; top: 8px;
+    display: flex; flex-wrap: wrap; gap: 3px; max-width: 68%; z-index: 5;
+  }
+  #brain-types label {
+    display: inline-flex; align-items: center; gap: 3px; cursor: pointer;
+    padding: 2px 5px; border-radius: 12px; font: 500 8.5px ui-monospace, Menlo, monospace;
+    background: rgba(10, 13, 20, 0.85); border: 1px solid var(--line); color: var(--dim);
+    user-select: none;
+  }
+  #brain-types label.off { opacity: 0.35; }
+  #brain-types i { width: 5px; height: 5px; border-radius: 50%; display: inline-block; }
+  #brain-types input { display: none; }
+
+  /* ---- Fluctfly Floating Neuron Inspector ---- */
+  #inspector {
+    position: absolute; z-index: 40;
+    right: 10px; top: 10px;
+    width: min(280px, calc(100% - 20px));
+    background: rgba(8, 12, 18, 0.95); border: 1px solid var(--line);
+    border-radius: 8px; padding: 12px; backdrop-filter: blur(16px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+  #inspector.hidden { display: none; }
+  #inspector-close {
+    position: absolute; top: 6px; right: 6px; background: none; border: none;
+    color: var(--faint); cursor: pointer; font-size: 13px; padding: 2px 5px;
+  }
+  #inspector-close:hover { color: var(--ink); }
+  .ins-badge { font-size: 8px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--faint); margin-bottom: 3px; }
+  #inspector h2 { margin: 0 20px 8px 0; font-size: 12.5px; color: var(--accent); letter-spacing: .04em; }
+  #inspector dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; font-size: 10.5px; }
+  #inspector dt { color: var(--faint); }
+  #inspector dd { margin: 0; color: var(--ink); overflow-wrap: anywhere; }
+  #inspector a { display: inline-block; margin-top: 10px; color: var(--accent); font-size: 9.5px; text-decoration: none; font-weight: 600; }
+  #inspector a:hover { text-decoration: underline; }
+
+  /* ---- Fluctfly Console & Tabs ---- */
+  .console-box {
+    display: flex; flex-direction: column; min-height: 0; flex: 1;
+    background: #05070b; border-top: 1px solid var(--line);
+  }
+  .tabs { display: flex; border-bottom: 1px solid var(--line); background: #080c14; flex-shrink: 0; }
+  .tabs button {
+    flex: 1; padding: 8px 4px; background: none; border: 0;
+    color: var(--faint); font: inherit; font-size: 10px; font-weight: 600;
+    letter-spacing: .12em; text-transform: uppercase; cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .tabs button:hover { color: var(--dim); background: rgba(255, 255, 255, 0.02); }
+  .tabs button.active {
+    color: var(--accent); box-shadow: inset 0 -2px 0 var(--accent);
+    background: rgba(255, 197, 92, 0.04);
+  }
+
+  .c-panel { display: none; flex-direction: column; flex: 1; min-height: 0; overflow-y: auto; }
+  .c-panel.active { display: flex; }
+  #tab-cmd { overflow: hidden; }
+  .panel-inner { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+
+  /* Form Elements & Sliders (Fluctfly Style) */
+  .c-panel label { display: block; color: var(--faint); font-size: 8.5px; letter-spacing: .18em; text-transform: uppercase; margin-bottom: 3px; }
+  .row { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; flex-wrap: wrap; }
+  .row.slider { gap: 10px; margin-bottom: 8px; }
+  .row.slider label { margin: 0; flex: 0 0 auto; }
+  .row.slider input[type=range] { flex: 1 1 90px; min-width: 90px; accent-color: var(--accent); }
+  .row.slider output { flex: 0 0 4ch; color: var(--accent); font-variant-numeric: tabular-nums; text-align: right; font-weight: 600; }
+
+  input[type=text], textarea, select {
+    flex: 1 1 140px; min-width: 0;
+    background: #0d121b; color: var(--ink);
+    border: 1px solid var(--line); border-radius: 6px;
+    padding: 6px 9px; font: inherit; font-size: 11.5px;
+  }
+  textarea { width: 100%; resize: vertical; margin-bottom: 4px; }
+  input:focus, textarea:focus, select:focus { outline: 1px solid var(--accent-dim); border-color: var(--accent-dim); }
+
+  button.primary {
+    background: var(--accent); color: #12161d; border: 0; border-radius: 6px;
+    padding: 6px 14px; font: inherit; font-weight: 700; font-size: 11px; cursor: pointer;
+    letter-spacing: .04em; white-space: nowrap; transition: filter 0.15s ease;
+  }
+  button.primary:hover { filter: brightness(1.15); box-shadow: 0 0 10px rgba(255, 197, 92, 0.4); }
+
+  button.sec-btn {
+    background: rgba(255, 255, 255, 0.05); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 6px; padding: 6px 12px; font: inherit; font-weight: 600; font-size: 10.5px;
+    cursor: pointer; transition: all 0.15s ease;
+  }
+  button.sec-btn:hover { background: rgba(255, 255, 255, 0.12); border-color: var(--dim); }
+
+  label.check {
+    display: flex; align-items: center; gap: 7px;
+    color: var(--dim); font-size: 10.5px; letter-spacing: 0;
+    text-transform: none; margin: 0 0 6px; cursor: pointer;
+  }
+  label.check input { accent-color: var(--accent); }
+
+  .hint { margin: 4px 0 0; color: var(--faint); font-size: 10px; line-height: 1.5; }
+
+  /* Engram & Valence Breakdown List */
+  .engram-header { font: 700 8.5px ui-monospace, monospace; color: var(--faint); letter-spacing: .15em; text-transform: uppercase; margin-top: 8px; }
+  .engram-list { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+  .engram-row {
+    display: grid; grid-template-columns: 85px 1fr 50px; align-items: center; gap: 8px;
+    background: rgba(255, 255, 255, 0.02); border: 1px solid var(--line); border-radius: 5px;
+    padding: 4px 8px; font-size: 10.5px;
+  }
+  .engram-meter { height: 5px; background: #131924; border-radius: 3px; overflow: hidden; }
+  .engram-fill { height: 100%; border-radius: 3px; transition: width 0.3s ease; }
+  .engram-val { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  /* 2D Compass Ring inside Compass Panel */
+  #panel-canvas { height: 180px; width: 100%; border-bottom: 1px solid var(--line); flex-shrink: 0; background: #05080e; }
+  #brain { display: block; }
+  .cc-controls { padding: 10px 14px; display: flex; flex-direction: column; gap: 6px; }
+  .cc-title { font: 700 8.5px ui-monospace, monospace; color: var(--faint); letter-spacing: .15em; }
+
+  /* ---- Techie Hacker Terminal ---- */
+  .term-header {
+    height: 27px; background: #090d16; border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: space-between; padding: 0 10px;
+    font: 600 10px ui-monospace, Menlo, monospace; color: var(--faint); flex-shrink: 0;
+  }
+  .term-title { display: flex; align-items: center; gap: 6px; color: var(--dim); }
+  .term-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .term-dot.green { background: #10b981; box-shadow: 0 0 6px #10b981; }
+  .term-badge {
+    background: rgba(255, 197, 92, 0.12); border: 1px solid rgba(255, 197, 92, 0.3);
+    padding: 1px 5px; border-radius: 3px; color: var(--accent); font-size: 8.5px; font-weight: 600;
+  }
+  .term-actions { display: flex; gap: 4px; }
+  .term-actions button {
+    padding: 2px 6px; font: 600 9px ui-monospace, monospace;
+    background: rgba(255, 255, 255, 0.04); border: 1px solid var(--line);
+    border-radius: 3px; color: var(--dim); cursor: pointer;
+  }
+  .term-actions button:hover { background: rgba(255, 255, 255, 0.12); color: #ffffff; }
+
+  /* Terminal Scrollable Log */
+  .term-log {
+    flex: 1; min-height: 80px; overflow-y: auto; padding: 10px 12px;
+    display: flex; flex-direction: column; gap: 4px;
+    font: 400 11px/1.4 ui-monospace, Menlo, Consolas, monospace;
+    background: radial-gradient(circle at 80% 10%, #090e18 0%, #04060a 100%);
+    scrollbar-width: thin; scrollbar-color: #1e2633 transparent;
+  }
+  .term-line { display: flex; gap: 6px; align-items: baseline; word-break: break-word; }
+  .term-tag {
+    font: 700 9px ui-monospace, monospace; padding: 1px 5px; border-radius: 3px;
+    flex-shrink: 0; text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .tag-sys  { background: rgba(14, 165, 233, 0.18); color: #38bdf8; border: 1px solid rgba(14, 165, 233, 0.35); }
+  .tag-cmd  { background: rgba(168, 85, 247, 0.18); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.35); }
+  .tag-good { background: rgba(16, 185, 129, 0.18); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35); }
+  .tag-bad  { background: rgba(239, 68, 68, 0.18); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.35); }
+  .tag-hint { background: rgba(255, 197, 92, 0.18); color: var(--accent); border: 1px solid rgba(255, 197, 92, 0.35); }
+  .tag-dan  { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); }
+  .tag-epg  { background: rgba(6, 182, 212, 0.2); color: #22d3ee; border: 1px solid rgba(6, 182, 212, 0.4); }
+  .term-msg { flex: 1; color: var(--ink); }
+  .term-msg pre { margin: 2px 0; font: 400 10.5px ui-monospace, Menlo, Consolas, monospace; color: var(--dim); white-space: pre-wrap; }
+  .term-ts  { color: var(--faint); font-size: 9px; flex-shrink: 0; }
+
+  /* Techie Prompt Bar */
+  .term-controls {
+    border-top: 1px solid var(--line); padding: 8px 12px;
+    display: flex; flex-direction: column; gap: 6px; background: #070a12; flex-shrink: 0;
+  }
+  #suggest-chips { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+  .sc-title { font: 700 8.5px ui-monospace, monospace; color: var(--faint); text-transform: uppercase; margin-right: 2px; }
+  .sc-btn {
+    background: rgba(255, 255, 255, 0.04); border: 1px solid var(--line);
+    border-radius: 10px; padding: 2px 7px; font: 500 10px ui-monospace, monospace;
+    color: var(--dim); cursor: pointer; transition: all 0.15s ease;
+  }
+  .sc-btn:hover {
+    background: rgba(255, 197, 92, 0.15); border-color: var(--accent-dim);
+    color: var(--accent); transform: translateY(-1px);
+  }
+  .say-preview {
+    font: 500 10.5px/1.3 ui-monospace, Menlo, monospace;
+    padding: 4px 8px; border-radius: 6px;
+    background: rgba(255, 255, 255, 0.02); border: 1px dashed var(--line);
+    color: var(--dim); min-height: 16px;
+  }
+  .say-preview.active {
+    background: rgba(255, 197, 92, 0.08); border-color: var(--accent-dim);
+    border-style: solid; color: var(--accent);
+  }
+  .term-input-row {
+    display: flex; align-items: center; gap: 6px;
+    background: #090e18; border: 1.5px solid var(--line); border-radius: 8px;
+    padding: 2px 4px 2px 8px; transition: all 0.15s ease;
+  }
+  .term-input-row:focus-within {
+    border-color: var(--accent); box-shadow: 0 0 0 3px rgba(255, 197, 92, 0.2);
+    background: #0c121e;
+  }
+  .term-prompt {
+    display: flex; align-items: center; font: 700 11.5px ui-monospace, Menlo, monospace;
+    user-select: none; flex-shrink: 0;
+  }
+  .p-user { color: #10b981; }
+  .p-dir  { color: var(--accent); }
+  .p-sym  { color: #f59e0b; margin-left: 2px; }
+  .term-input-row input[type=text] {
+    flex: 1; min-width: 0; background: transparent; border: none; padding: 7px 4px;
+    color: var(--ink); font: 500 12px ui-monospace, Menlo, Consolas, monospace;
+    box-shadow: none; outline: none;
+  }
+  .term-input-row input[type=text]:focus { background: transparent; box-shadow: none; }
+  #mic {
+    border-radius: 6px; padding: 4px 9px; font: 600 10px ui-sans-serif, system-ui;
+    background: rgba(255, 255, 255, 0.05); border: 1px solid var(--line); color: var(--dim);
+  }
+  #mic.on { background: #e11d48; color: #fff; border-color: #fda4af; }
+  #experiments { display: flex; gap: 5px; }
+  #experiments button {
+    flex: 1; font: 600 9.5px ui-monospace, monospace; padding: 5px 3px; border-radius: 5px;
+    background: rgba(255, 255, 255, 0.05); border: 1px solid var(--line); color: var(--dim); cursor: pointer;
+  }
+  #experiments button:hover { background: rgba(255, 255, 255, 0.12); color: #ffffff; }
+  #experiments button.on { background: rgba(239, 68, 68, 0.2); border-color: #f87171; color: #f87171; }
+
+  /* ---- Fluctfly Boot Veil ------------------------------------------------ */
+  #boot {
+    position: fixed; inset: 0; z-index: 5000;
+    display: grid; place-items: center;
+    background: #05070b;
+    transition: opacity .7s ease;
+  }
+  #boot.done { opacity: 0; pointer-events: none; }
+  .boot-inner { text-align: center; }
+  .boot-title { font-size: 26px; letter-spacing: .5em; color: var(--accent); margin-bottom: 18px; font-weight: 700; }
+  .boot-bar { width: 240px; height: 3px; background: var(--line); overflow: hidden; border-radius: 2px; }
+  .boot-bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .3s ease; }
+  .boot-note { margin-top: 14px; color: var(--faint); font-size: 10px; letter-spacing: .15em; text-transform: uppercase; }
+
+  /* =========================================================================
+     HENRY HEFFERNAN-STYLE 3D WORKSTATION & NONA-OS 98
+     ========================================================================= */
+  #desk {
+    position: fixed; inset: 0; z-index: 100; display: none;
+    background: transparent;
+    opacity: 0; transition: opacity 0.45s ease;
+  }
+  #desk.on { display: block; opacity: 1; }
+
+  /* CRT Monitor casing & overlay */
+  .crt-frame {
+    position: absolute; inset: clamp(8px, 2.5vw, 36px);
+    background: #11141c;
+    border-radius: 20px;
+    border: 8px solid #c7beab; /* Vintage 90s beige chassis */
+    box-shadow: 0 0 0 4px #9c927f, 0 30px 80px rgba(0,0,0,0.85), inset 0 0 40px rgba(0,0,0,0.8);
+    display: flex; flex-direction: column; overflow: hidden;
+    transition: transform 0.5s ease, opacity 0.5s ease;
+  }
+  .crt-frame.back-view {
+    transform: scale(0.65) translateY(40px);
+    opacity: 0.92;
+    pointer-events: auto;
+  }
+
+  /* CRT Header Bar */
+  .crt-header-bar {
+    height: 32px; background: #080c14; border-bottom: 1px solid rgba(255,255,255,0.1);
+    display: flex; align-items: center; justify-content: space-between; padding: 0 12px;
+    font: 500 11px ui-monospace, Menlo, monospace; color: #8893a7; z-index: 10002;
+    flex-shrink: 0;
+  }
+  .crt-brand { display: flex; align-items: center; gap: 8px; }
+  .crt-brand-dot { width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px #10b981; }
+  .crt-fly-badge {
+    display: flex; align-items: center; gap: 6px; padding: 2px 10px;
+    background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4);
+    border-radius: 12px; font: 600 10.5px ui-sans-serif, system-ui; color: #6ee7b7;
+  }
+  .fly-indicator-dot {
+    width: 6px; height: 6px; border-radius: 50%; background: #10b981;
+    box-shadow: 0 0 6px #10b981; animation: flyBlink 1.4s infinite;
+  }
+  @keyframes flyBlink { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.35; transform: scale(0.85); } }
+  .crt-header-actions { display: flex; align-items: center; gap: 8px; }
+  .crt-action-btn {
+    background: #1e293b; border: 1px solid #334155; color: #cbd5e1;
+    font: 600 10.5px sans-serif; padding: 4px 10px; border-radius: 4px;
+    cursor: pointer; transition: all 0.15s ease;
+  }
+  .crt-action-btn:hover { background: #334155; color: #ffffff; border-color: #64748b; }
+  .crt-takeoff-btn {
+    background: linear-gradient(135deg, #059669, #10b981);
+    border: 1px solid #34d399; color: #ffffff;
+    font: 700 11px sans-serif; padding: 4px 14px; border-radius: 4px;
+    cursor: pointer; display: flex; align-items: center; gap: 6px;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+    transition: all 0.15s ease;
+  }
+  .crt-takeoff-btn:hover {
+    background: linear-gradient(135deg, #047857, #059669);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.6);
+  }
+  .ide-launch-btn {
+    background: linear-gradient(135deg, #0284c7, #0ea5e9) !important;
+    border: 1px solid #38bdf8 !important;
+    color: #ffffff !important;
+  }
+  .ide-launch-btn:hover {
+    background: linear-gradient(135deg, #0369a1, #0284c7) !important;
+  }
+  .ide-teach-btn {
+    background: linear-gradient(135deg, #d97706, #f59e0b) !important;
+    border: 1px solid #fbbf24 !important;
+    color: #ffffff !important;
+  }
+  .ide-teach-btn:hover {
+    background: linear-gradient(135deg, #b45309, #d97706) !important;
+  }
+  .ide-synth-btn {
+    background: linear-gradient(135deg, #059669, #10b981) !important;
+    border: 1px solid #34d399 !important;
+    color: #ffffff !important;
+  }
+  .ide-synth-btn:hover {
+    background: linear-gradient(135deg, #047857, #059669) !important;
+  }
+  .ide-lang-selector { display: flex; gap: 2px; background: #0b0f19; padding: 2px; border-radius: 4px; border: 1px solid #1e293b; }
+  .ide-lang-btn {
+    background: transparent; border: 0; color: #94a3b8; font: 600 10px monospace;
+    padding: 3px 8px; border-radius: 3px; cursor: pointer;
+  }
+  .ide-lang-btn.active { background: #1e293b; color: #38bdf8; }
+  .ide-status-pill {
+    margin-left: auto; font: 600 9px monospace; color: #10b981;
+    background: rgba(16, 185, 129, 0.12); padding: 1px 6px; border-radius: 3px;
+  }
+  .ide-status-pill.active { color: #f59e0b; background: rgba(245, 158, 11, 0.2); }
+
+  /* Curved CRT Screen glass with scanlines */
+  .crt-screen {
+    flex: 1; display: flex; flex-direction: column; position: relative; overflow: hidden;
+    background: #008080; /* Classic Windows 95/98 Teal! */
+    transform-origin: center center;
+  }
+  .crt-screen.power-off {
+    animation: crtTurnOff 0.28s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+  }
+  @keyframes crtTurnOff {
+    0% { transform: scale(1, 1); filter: brightness(1); }
+    40% { transform: scale(1, 0.008); filter: brightness(3); opacity: 1; }
+    80% { transform: scale(0.008, 0.008); filter: brightness(6); opacity: 0.8; }
+    100% { transform: scale(0, 0); opacity: 0; }
+  }
+  .crt-screen::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(rgba(255,255,255,0.02) 0 1px, transparent 1px 3px);
+    box-shadow: inset 0 0 80px rgba(0,0,0,0.45);
+    z-index: 9999;
+  }
+
+  /* Desktop Canvas & Shortcuts */
+  .desktop {
+    flex: 1; position: relative; overflow: hidden;
+    background: radial-gradient(circle at 50% 40%, #008080 0%, #005a5a 100%);
+  }
+  .desktop-icons {
+    position: absolute; top: 16px; left: 16px;
+    display: flex; flex-direction: column; gap: 16px;
+    z-index: 10;
+  }
+  .d-icon {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    width: 84px; text-align: center; cursor: pointer; padding: 6px;
+    border-radius: 4px; user-select: none;
+  }
+  .d-icon:hover { background: rgba(255, 255, 255, 0.12); }
+  .d-icon.selected { background: rgba(0, 0, 128, 0.6); border: 1px dotted rgba(255,255,255,0.7); }
+  .d-icon .ico { font-size: 32px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4)); }
+  .d-icon .txt {
+    font: 500 11px "Segoe UI", Tahoma, sans-serif; color: #ffffff;
+    text-shadow: 1px 1px 2px #000000; word-break: break-word; line-height: 1.2;
+  }
+
+  /* Retro 90s Window Chrome */
+  .win-frame {
+    position: absolute; display: flex; flex-direction: column;
+    background: #c0c0c0; border: 2px solid #dfdfdf;
+    border-right-color: #404040; border-bottom-color: #404040;
+    box-shadow: 3px 3px 12px rgba(0,0,0,0.5);
+    border-radius: 2px; min-width: 260px; min-height: 180px;
+    z-index: 100;
+  }
+  .win-frame.maximized { inset: 0 !important; width: 100% !important; height: 100% !important; border-radius: 0; }
+  .win-titlebar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 3px 5px; height: 26px;
+    background: linear-gradient(90deg, #000080, #1084d0); color: #ffffff;
+    font: 700 11.5px "Segoe UI", Tahoma, sans-serif; cursor: move; user-select: none;
+  }
+  .win-frame:not(.active) .win-titlebar {
+    background: linear-gradient(90deg, #808080, #b5b5b5); color: #c0c0c0;
+  }
+  .win-title { display: flex; align-items: center; gap: 6px; }
+  .win-controls { display: flex; gap: 2px; }
+  .wc-btn {
+    width: 18px; height: 18px; padding: 0; font: 700 10px sans-serif; line-height: 1;
+    background: #c0c0c0; border: 1.5px solid #ffffff; border-right-color: #404040; border-bottom-color: #404040;
+    color: #000000; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  }
+  .wc-btn:active { border-color: #404040; border-right-color: #ffffff; border-bottom-color: #ffffff; }
+
+  .win-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #0b0f17; }
+  .win-body { flex: 1; display: flex; flex-direction: column; overflow: hidden; color: #d8e2ee; }
+
+  /* IDE Window Styles */
+  .ide-body { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+  .ide-toolbar {
+    display: flex; align-items: center; gap: 8px; padding: 6px 10px;
+    background: #141924; border-bottom: 1px solid #222c3c; flex-shrink: 0; flex-wrap: wrap;
+  }
+  .ide-btn {
+    background: #0ea5e9; border: 1px solid #38bdf8; color: #ffffff;
+    font-weight: 600; font-size: 11px; padding: 5px 11px; border-radius: 4px; cursor: pointer;
+  }
+  .ide-btn:hover { background: #0284c7; }
+  .ide-presets { display: flex; align-items: center; gap: 5px; font-size: 10px; color: #94a3b8; }
+  .preset-btn {
+    background: #1e293b; border: 1px solid #334155; color: #cbd5e1;
+    padding: 3px 7px; border-radius: 4px; font-size: 10px; cursor: pointer;
+  }
+  .preset-btn:hover { background: #334155; color: #ffffff; }
+  .ide-speed-btn {
+    background: #1e293b; border: 1px solid #334155; color: #94a3b8; font: 600 10px monospace;
+    padding: 4px 8px; border-radius: 4px; cursor: pointer; transition: all 0.15s ease;
+  }
+  .ide-speed-btn.active {
+    background: linear-gradient(135deg, #f59e0b, #fbbf24); border-color: #fcd34d; color: #000000; font-weight: 700;
+  }
+  .ide-prompt-bar {
+    display: flex; align-items: center; gap: 6px; padding: 5px 10px;
+    background: #0b101c; border-bottom: 1px solid #1e293b; flex-shrink: 0;
+  }
+  .ip-icon { font-size: 13px; }
+  .ide-prompt-input {
+    flex: 1; background: #050810; border: 1px solid #222e42; border-radius: 4px;
+    color: #f1f5f9; font: 500 11.5px monospace; padding: 4px 8px; outline: none;
+  }
+  .ide-prompt-input:focus { border-color: #38bdf8; box-shadow: 0 0 8px rgba(56, 189, 248, 0.3); }
+  .ide-prompt-btn {
+    background: #152238; border: 1px solid #25395c; color: #38bdf8;
+    font: 600 11px monospace; padding: 4px 10px; border-radius: 4px; cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .ide-prompt-btn:hover { background: #0284c7; color: #ffffff; border-color: #38bdf8; }
+  .ide-textarea {
+    flex: 1; min-height: 120px; resize: none; border: 0; outline: none;
+    background: #070a10; color: #7dd3fc; padding: 12px 14px;
+    font: 400 13px/1.65 ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  .ide-output-panel { height: 140px; min-height: 120px; flex-shrink: 0; display: flex; flex-direction: column; border-top: 1px solid #222c3c; background: #05080e; }
+  .ide-output-title { display: flex; align-items: center; justify-content: space-between; font: 600 9px monospace; color: #64748b; padding: 4px 10px; background: #0a0e17; letter-spacing: 0.08em; }
+  .ide-log { flex: 1; overflow-y: auto; padding: 6px 10px; font: 400 11px monospace; }
+  .log-line { padding: 1.5px 0; }
+  .log-line.echo { color: #38bdf8; }
+  .log-line.good { color: #4ade80; }
+  .log-line.bad { color: #f87171; }
+  .log-line.hint { color: #94a3b8; }
+
+  /* Brain Window Styles */
+  .brain-body { padding: 14px; gap: 10px; overflow-y: auto; }
+  .brain-stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .b-card { background: #131824; border: 1px solid #222c3c; border-radius: 6px; padding: 8px 10px; }
+  .b-card span { display: block; font-size: 8.5px; color: #64748b; font-weight: 600; letter-spacing: 0.06em; }
+  .b-card b { font-size: 14px; color: #f1f5f9; font-weight: 700; font-family: monospace; }
+  .win-subhead { font: 600 10px monospace; color: #64748b; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 6px; }
+  .win-valence-list { display: flex; flex-direction: column; gap: 5px; }
+  .v-row { display: grid; grid-template-columns: 80px 1fr 48px; align-items: center; gap: 8px; font: 500 11px monospace; }
+  .v-meter { height: 7px; background: #1e293b; border-radius: 4px; overflow: hidden; }
+  .v-meter i { display: block; height: 100%; border-radius: 4px; transition: width 0.2s; }
+  .v-val { text-align: right; }
+  .win-foot { font: 400 10px monospace; color: #475569; margin-top: auto; border-top: 1px solid #1e293b; padding-top: 6px; }
+
+  /* Radar & Synapse Windows */
+  .radar-body { padding: 10px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .radar-canvas-wrap { background: #06111e; border: 1px solid #1e3a5f; border-radius: 6px; padding: 4px; }
+  .radar-info { font: 400 11px monospace; color: #38bdf8; }
+  .syn-body { padding: 14px; gap: 10px; font: 400 11.5px monospace; }
+  .syn-header { color: #94a3b8; font-weight: 600; }
+  .syn-grid-visual { display: grid; grid-template-columns: repeat(16, 1fr); gap: 4px; padding: 10px; background: #060910; border-radius: 6px; }
+  .s-dot { width: 10px; height: 10px; border-radius: 2px; background: #1e293b; }
+  .s-dot.active { background: #f59e0b; box-shadow: 0 0 6px #f59e0b; }
+  .guide-body { padding: 16px; overflow-y: auto; line-height: 1.6; }
+  .guide-body h3 { margin: 0 0 8px; color: #38bdf8; font-size: 15px; }
+  .guide-body h4 { margin: 12px 0 4px; color: #f1f5f9; font-size: 12px; }
+  .guide-body code { background: #1e293b; padding: 1px 4px; border-radius: 3px; color: #f59e0b; font-family: monospace; }
+
+  /* Fluctfly Recall Fabric Window Styles */
+  .fabric-body { padding: 10px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; background: #070d18; }
+  .fabric-header { display: flex; align-items: center; justify-content: space-between; padding: 4px 6px; background: #0c1424; border-radius: 4px; border: 1px solid #1e293b; }
+  .fh-title { display: flex; align-items: center; gap: 6px; font: 700 10.5px "Segoe UI", sans-serif; color: #38bdf8; }
+  .dot-live { width: 7px; height: 7px; border-radius: 50%; background: #10b981; box-shadow: 0 0 6px #10b981; animation: flyBlink 1.6s infinite; }
+  .fh-metrics { font: 500 9.5px monospace; color: #94a3b8; }
+  .fabric-wave-wrap { background: #050a14; border: 1px solid #1e3a5f; border-radius: 4px; padding: 4px; display: flex; flex-direction: column; }
+  .wave-label, .lattice-label { font: 600 8.5px monospace; color: #64748b; letter-spacing: 0.06em; margin-bottom: 3px; }
+  #fabric-wave-canvas { width: 100%; height: 95px; display: block; border-radius: 2px; }
+  .fabric-lattice-wrap { flex: 1; display: flex; flex-direction: column; background: #080f1e; border: 1px solid #1e293b; border-radius: 4px; padding: 6px 8px; }
+  .fabric-tokens { display: flex; flex-wrap: wrap; gap: 5px; max-height: 140px; overflow-y: auto; padding: 4px 0; }
+  .f-badge {
+    display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 4px;
+    font: 500 10px monospace; cursor: pointer; transition: all 0.12s ease; border: 1px solid transparent;
+  }
+  .f-badge:hover { transform: translateY(-1px); box-shadow: 0 2px 6px rgba(0,0,0,0.4); }
+  .f-badge.keyword { background: rgba(56, 189, 248, 0.15); border-color: #0284c7; color: #7dd3fc; }
+  .f-badge.biological { background: rgba(245, 158, 11, 0.18); border-color: #d97706; color: #fcd34d; }
+  .f-badge.motor { background: rgba(16, 185, 129, 0.18); border-color: #059669; color: #6ee7b7; }
+  .f-badge.landmark { background: rgba(168, 85, 247, 0.18); border-color: #9333ea; color: #d8b4fe; }
+  .f-badge.variable { background: rgba(148, 163, 184, 0.15); border-color: #475569; color: #cbd5e1; }
+  .f-badge small { opacity: 0.8; font-size: 8.5px; }
+  .fabric-actions { display: flex; gap: 6px; margin-top: auto; }
+  .fb-btn {
+    flex: 1; background: #131b2e; border: 1px solid #223252; color: #cbd5e1;
+    font: 600 10px monospace; padding: 5px; border-radius: 4px; cursor: pointer;
+  }
+  .fb-btn:hover { background: #1e293b; color: #ffffff; border-color: #3b82f6; }
+
+  /* Desk Perch Window Styles */
+  .perch-body { padding: 12px; background: #090e18; }
+  .perch-card { display: flex; flex-direction: column; gap: 10px; }
+  .perch-header { display: flex; align-items: center; gap: 6px; font: 700 11.5px "Segoe UI", sans-serif; color: #f1f5f9; }
+  .perch-dot { width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px #10b981; }
+  .perch-stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .p-card { background: #101726; border: 1px solid #1e293b; border-radius: 4px; padding: 6px 8px; text-align: center; }
+  .p-card span { display: block; font-size: 8px; color: #64748b; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 2px; }
+  .p-card b { font-size: 12px; color: #38bdf8; font-family: monospace; font-weight: 700; }
+  .perch-interact { display: flex; flex-direction: column; gap: 6px; background: #0c1424; border: 1px solid #1e293b; border-radius: 6px; padding: 10px; }
+  .pi-title { font: 700 9px monospace; color: #94a3b8; letter-spacing: 0.08em; }
+  .pi-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+  .p-btn {
+    background: #172033; border: 1px solid #273654; color: #e2e8f0;
+    font: 600 10.5px sans-serif; padding: 7px 8px; border-radius: 4px; cursor: pointer; text-align: center;
+    transition: all 0.15s ease;
+  }
+  .p-btn:hover { background: #223252; color: #ffffff; border-color: #38bdf8; }
+  .p-btn-launch {
+    grid-column: span 2; background: linear-gradient(135deg, #059669, #10b981) !important;
+    border-color: #34d399 !important; color: #ffffff !important; font-weight: 700 !important;
+  }
+  .p-btn-launch:hover { background: linear-gradient(135deg, #047857, #059669) !important; }
+  .perch-tip { font: 400 10px monospace; color: #64748b; line-height: 1.45; background: #070a12; padding: 8px; border-radius: 4px; border: 1px dashed #1e293b; }
+
+  /* Retro Taskbar */
+  .taskbar {
+    height: 34px; background: #c0c0c0; border-top: 2px solid #ffffff;
+    display: flex; align-items: center; padding: 3px 5px; gap: 6px;
+    box-shadow: 0 -2px 6px rgba(0,0,0,0.3); z-index: 10000;
+  }
+  .start-btn {
+    display: flex; align-items: center; gap: 6px; padding: 3px 8px; height: 24px;
+    background: #c0c0c0; border: 2px solid #ffffff; border-right-color: #404040; border-bottom-color: #404040;
+    font: 700 11.5px "Segoe UI", Tahoma, sans-serif; color: #000000; cursor: pointer; user-select: none;
+  }
+  .start-btn:active { border-color: #404040; border-right-color: #ffffff; border-bottom-color: #ffffff; }
+  .start-flag { font-size: 14px; }
+  .taskbar-apps { flex: 1; display: flex; gap: 4px; overflow-x: auto; }
+  .tb-app {
+    display: flex; align-items: center; gap: 4px; padding: 2px 10px; height: 24px; max-width: 140px;
+    background: #c0c0c0; border: 2px solid #ffffff; border-right-color: #404040; border-bottom-color: #404040;
+    font: 500 11px sans-serif; color: #000000; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .tb-app.active { background: #dfdfdf; border-color: #404040; border-right-color: #ffffff; border-bottom-color: #ffffff; font-weight: 700; }
+  .tray { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+  .tray-btn {
+    background: #c0c0c0; border: 1.5px solid #ffffff; border-right-color: #404040; border-bottom-color: #404040;
+    color: #000000; font: 500 10.5px sans-serif; padding: 2px 6px; height: 22px; cursor: pointer;
+  }
+  .tray-clock {
+    padding: 2px 8px; background: #c0c0c0; border: 1.5px solid #808080; border-right-color: #ffffff; border-bottom-color: #ffffff;
+    font: 500 11px monospace; color: #000000;
+  }
+  .tray-exit {
+    background: #e11d48; border: 1.5px solid #fda4af; color: #ffffff; font: 600 10.5px sans-serif;
+    padding: 2px 8px; height: 22px; cursor: pointer; border-radius: 2px;
+  }
+
+  /* Start Menu Popup */
+  .start-menu {
+    position: absolute; bottom: 34px; left: 0; width: 220px;
+    background: #c0c0c0; border: 2px solid #ffffff; border-right-color: #404040; border-bottom-color: #404040;
+    box-shadow: 4px -4px 16px rgba(0,0,0,0.5); display: none; z-index: 10001;
+  }
+  .start-menu.open { display: flex; }
+  .sm-banner {
+    width: 28px; background: linear-gradient(180deg, #000080, #1084d0);
+    display: flex; align-items: flex-end; justify-content: center; padding-bottom: 8px;
+  }
+  .sm-banner span {
+    writing-mode: vertical-rl; transform: rotate(180deg);
+    font: 700 14px "Segoe UI", sans-serif; color: #ffffff; letter-spacing: 0.1em;
+  }
+  .sm-items { flex: 1; padding: 4px; display: flex; flex-direction: column; gap: 2px; }
+  .sm-item {
+    padding: 6px 10px; font: 500 11.5px "Segoe UI", sans-serif; color: #000000;
+    cursor: pointer; display: flex; align-items: center; gap: 8px;
+  }
+  .sm-item:hover { background: #000080; color: #ffffff; }
+  .sm-items hr { margin: 4px 0; border: 0; border-top: 1px solid #808080; border-bottom: 1px solid #ffffff; }
+</style>
+</head>
+<body>
+<!-- Fluctfly Boot Veil -->
+<div id="boot">
+  <div class="boot-inner">
+    <div class="boot-title">NONA</div>
+    <div class="boot-bar"><i id="boot-bar-prog"></i></div>
+    <div class="boot-note">CONNECTOME MALECNS v1.0 &middot; JANELIA &middot; FLYWIRE</div>
+  </div>
+</div>
+
+<div id="app">
+  <div id="stage">
+    <canvas id="scene"></canvas>
+
+    <div class="overlay" id="title">
+      <h1>Nona <span>Connectome Controller</span></h1>
+      <p>A virtual fly over Bangalore. Heading is computed by 166 real neurons from the
+         male <em>Drosophila</em> central complex. Teach her words to depress real mushroom-body synapses.</p>
+    </div>
+
+    <!-- Flight HUD Controls Top Right -->
+    <div class="overlay" id="flight-hud">
+      <button class="hud-pill" id="btn-mode" title="Toggle Manual Flight vs Biological Autopilot (C)">
+        <span class="dot auto" id="mode-dot"></span>
+        <span id="mode-text">Autopilot (Brain)</span>
+        <kbd>C</kbd>
+      </button>
+      <button class="hud-pill" id="btn-theme" title="Toggle Daytime Light theme vs Dusk">
+        ☀️ Light Theme
+      </button>
+      <button class="hud-pill" id="btn-dock" title="Enter 2586Labs Workstation (E)">
+        🏠 Enter Lab <kbd>E</kbd>
+      </button>
+    </div>
+
+    <!-- Tactical GPS Airspace Mini-Map -->
+    <div class="overlay" id="minimap-card">
+      <div class="mm-header">
+        <div class="mm-status" id="mm-status-pill" title="Toggle Collapse Mini-Map (M)">
+          <span class="mm-dot"></span>
+          <span class="mm-title">GPS AIRSPACE</span>
+        </div>
+        <div class="mm-tools">
+          <button class="mm-tool-btn" id="mm-mode-btn" title="Toggle North-Up vs Heading-Up (N)">N-UP</button>
+          <button class="mm-tool-btn" id="mm-zoom-out" title="Zoom Out (-)">-</button>
+          <button class="mm-tool-btn" id="mm-zoom-in" title="Zoom In (+)">+</button>
+          <button class="mm-tool-btn" id="mm-max-btn" title="Toggle Full Airspace Scope">⛶</button>
+          <button class="mm-tool-btn" id="mm-fold-btn" title="Toggle Collapse (M)">▾</button>
+        </div>
+      </div>
+      <div class="mm-body" id="mm-body">
+        <div class="mm-canvas-wrap">
+          <canvas id="minimap-canvas" width="250" height="230"></canvas>
+        </div>
+        <div class="mm-footer">
+          <span id="mm-coords">X: 0m · Z: 0m · ALT: 88m</span>
+          <span id="mm-target">LOCK: NONE</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Destination Bar -->
+    <div class="overlay" id="dest-bar">
+      <span class="dest-label">Fly To:</span>
+      <button class="dest-btn" data-place="home" title="Fly autonomously to 2586Labs on 100 Feet Road">🏠 2586Labs</button>
+      <button class="dest-btn" data-place="cubbon" title="Fly to Cubbon Park">🌳 Cubbon</button>
+      <button class="dest-btn" data-place="vidhana" title="Fly to Vidhana Soudha">🏛️ Vidhana</button>
+      <button class="dest-btn" data-place="ubcity" title="Fly to UB City">🏢 UB City</button>
+      <button class="dest-btn" data-place="lalbagh" title="Fly to Lalbagh Glasshouse">🌸 Lalbagh</button>
+    </div>
+
+    <!-- Interactive Flight Controls Reference -->
+    <div class="overlay" id="flight-guide">
+      <div class="fg-steer-btns">
+        <button class="fg-btn" id="ctrl-left" title="Turn Left (A / Left Arrow)">⮜ Left</button>
+        <button class="fg-btn" id="ctrl-boost" title="Boost Speed (W / Space)">🚀 Boost</button>
+        <button class="fg-btn" id="ctrl-right" title="Turn Right (D / Right Arrow)">Right ⮞</button>
+      </div>
+      <div class="fg-hint">🖱️ <b>Drag on sky</b> or use keys <kbd>A</kbd><kbd>D</kbd> to steer</div>
+    </div>
+
+    <div class="overlay" id="readouts">
+      <div><span>nearest</span><b id="near">&mdash;</b></div>
+      <div><span>heading</span><b id="heading">&mdash;</b></div>
+      <div><span>flying toward</span><b id="goal">nothing yet</b></div>
+      <div><span>airspeed</span><b id="airspeed">42 km/h</b></div>
+      <div><span>altitude</span><b id="altitude">88 m</b></div>
+    </div>
+  </div>
+
+  <aside id="panel" class="mode-split">
+    <!-- Fluctfly Masthead -->
+    <header id="masthead">
+      <div class="mast-title-row">
+        <div class="mast-brand">
+          <span class="mast-dot"></span>
+          <h1>NONA</h1>
+          <span class="mast-badge">MaleCNS v1.0</span>
+        </div>
+        <div class="panel-mode-tabs" id="panel-tabs">
+          <button class="pm-tab active" data-mode="split" title="Split view">⚡ Split</button>
+          <button class="pm-tab" data-mode="terminal" title="Maximize Cybernetic Terminal">💻 Full CMD</button>
+          <button class="pm-tab" data-mode="brain" title="Maximize 3D Connectome">🧠 3D Brain</button>
+        </div>
+      </div>
+      <div class="sub"><i>Drosophila melanogaster</i> central complex &middot; mushroom body</div>
+      <dl class="stats">
+        <div><dt>neurons</dt><dd id="stat-cx">166</dd></div>
+        <div><dt>synapses</dt><dd id="stat-mb">1,940</dd></div>
+        <div><dt>heading</dt><dd id="stat-heading">—</dd></div>
+        <div><dt>lit</dt><dd id="stat-lit">0</dd></div>
+      </dl>
+    </header>
+
+    <!-- 3D Morphology with Floating Neuron Inspector -->
+    <div id="brain-wrap">
+      <canvas id="brain3d"></canvas>
+      <div id="brain-types"></div>
+      <div id="brain-tools">
+        <button id="brain-spin" class="on" title="Toggle rotation">&#10226;</button>
+        <button id="brain-expand" title="Expand">&#9974;</button>
+      </div>
+      <div id="brain-cap">real morphology &middot; <span id="brain-stat">loading&hellip;</span></div>
+
+      <!-- Floating Neuron Inspector -->
+      <section id="inspector" class="hidden">
+        <button id="inspector-close" title="Close inspector">&times;</button>
+        <div class="ins-badge">NEURON INSPECTOR</div>
+        <h2 id="ins-type">EPG</h2>
+        <dl>
+          <dt>Class</dt><dd id="ins-class">Central Complex Compass</dd>
+          <dt>Transmitter</dt><dd id="ins-nt">Acetylcholine (Cholinergic)</dd>
+          <dt>Partners</dt><dd id="ins-syn">Delta7, PEG, PEN_a</dd>
+          <dt>Activity</dt><dd id="ins-rate">0.0 Hz</dd>
+          <dt>Codex</dt><dd><a id="ins-link" href="https://codex.flywire.ai" target="_blank" rel="noopener">FlyWire Codex ↗</a></dd>
+        </dl>
+      </section>
+    </div>
+
+    <!-- Fluctfly Tabbed Console -->
+    <div class="console-box" id="console-box">
+      <nav class="tabs" id="console-tabs">
+        <button class="c-tab active" data-tab="cmd">CMD</button>
+        <button class="c-tab" data-tab="map">MAP</button>
+        <button class="c-tab" data-tab="teach">TEACH</button>
+        <button class="c-tab" data-tab="compass">COMPASS</button>
+        <button class="c-tab" data-tab="optics">OPTICS</button>
+      </nav>
+
+      <!-- TAB 1: CMD Terminal -->
+      <div class="c-panel active" id="tab-cmd">
+        <div class="term-header">
+          <div class="term-title">
+            <span class="term-dot green"></span>
+            <span>NONA-CMD</span>
+            <span class="term-badge">MaleCNS v1.0</span>
+          </div>
+          <div class="term-actions">
+            <button id="btn-term-clear" title="Clear terminal log ('clear')">clear</button>
+            <button id="btn-term-help" title="Print available commands ('help')">help ?</button>
+            <button id="btn-term-max" title="Toggle Full Terminal / Split">⛶ max</button>
+          </div>
+        </div>
+        <div id="log" class="term-log"></div>
+        <div class="term-controls" id="controls">
+          <div id="suggest-chips">
+            <span class="sc-title">Quick:</span>
+            <button class="sc-btn" data-fill="this is home" title="Teach sensory cue for nearest landmark">🏷️ "this is home"</button>
+            <button class="sc-btn" data-fill="good girl" title="Trigger dopamine to reinforce association">🍬 "good girl"</button>
+            <button class="sc-btn" data-fill="go home" title="Engage autopilot towards 2586Labs">🚀 "go home"</button>
+            <button class="sc-btn" data-fill="bad girl" title="Depress avoidance compartments">⚡ "bad girl"</button>
+          </div>
+          <div id="say-preview" class="say-preview">💡 Type or click a chip to teach Nona's connectome</div>
+          <div class="term-input-row" id="row">
+            <div class="term-prompt">
+              <span class="p-user">nona</span><span style="color:#64748b">@</span><span class="p-dir">cns</span><span class="p-sym">:&gt;</span>
+            </div>
+            <input id="say" type="text" placeholder="help, fly <place>, teach <word>, reward, status..." autocomplete="off" spellcheck="false" />
+            <button id="mic" title="Voice speech recognition">&#9679; speak</button>
+            <button id="send">RUN ↵</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: MAP (Bangalore Airspace Vector Radar & Waypoints) -->
+      <div class="c-panel" id="tab-map">
+        <div class="radar-tab-header">
+          <div class="rth-title">
+            <span class="term-dot green"></span>
+            <span>AIRSPACE RADAR</span>
+          </div>
+          <div class="rth-tools">
+            <button class="sec-btn rth-btn" id="tab-map-mode" title="Toggle North-Up / Heading-Up">N-UP</button>
+            <button class="sec-btn rth-btn" id="tab-map-zoom-out" title="Zoom Out">-</button>
+            <button class="sec-btn rth-btn" id="tab-map-zoom-in" title="Zoom In">+</button>
+            <button class="sec-btn rth-btn" id="tab-map-center" title="Center on Fly">Center</button>
+          </div>
+        </div>
+        <div class="radar-tab-canvas-wrap">
+          <canvas id="radar-canvas-full" width="370" height="250"></canvas>
+        </div>
+        <div class="radar-tab-waypoints">
+          <div class="rtw-header">BANGALORE LANDMARKS & AUTOPILOT WAYPOINTS</div>
+          <div class="rtw-list" id="rtw-list"></div>
+        </div>
+      </div>
+
+      <!-- TAB 3: TEACH (Associative Learning Studio) -->
+      <div class="c-panel" id="tab-teach">
+        <div class="panel-inner">
+          <label for="teach-cue">Sensory Cue (Word / Olfactory Signal)</label>
+          <div class="row">
+            <input type="text" id="teach-cue" placeholder="e.g. jasmine, home, danger" value="home" autocomplete="off" />
+          </div>
+
+          <label for="teach-landmark">Map to Bangalore Landmark</label>
+          <div class="row">
+            <select id="teach-landmark">
+              <option value="home">🏠 2586Labs (100 Feet Road)</option>
+              <option value="cubbon">🌳 Cubbon Park (Bamboo Groves)</option>
+              <option value="vidhana">🏛️ Vidhana Soudha (Granite Dome)</option>
+              <option value="ubcity">🏢 UB City (Pinnacle Spire)</option>
+              <option value="lalbagh">🌸 Lalbagh Glasshouse</option>
+            </select>
+          </div>
+
+          <div class="row slider">
+            <label for="teach-salience">Salience / Reps</label>
+            <input type="range" id="teach-salience" min="1" max="5" value="1" />
+            <output id="teach-sal-out">1x</output>
+          </div>
+
+          <div class="row" style="margin-top: 4px;">
+            <button class="primary" id="btn-teach-reward" title="Trigger Dopamine (PAM cluster) to reinforce approach valence">
+              🍬 + Reward (Dopamine PAM)
+            </button>
+            <button class="sec-btn" id="btn-teach-punish" title="Trigger Avoidance Dopamine (PPL1 cluster) to depress valence">
+              ⚡ - Punish (Avoidance PPL1)
+            </button>
+            <button class="sec-btn" id="btn-teach-forget" title="Reset all synapses to naive state">
+              🧹 Reset (Forget)
+            </button>
+          </div>
+
+          <div class="engram-header">MUSHROOM BODY VALENCES (MBON OUTPUT)</div>
+          <div id="engram-list" class="engram-list"></div>
+          <p class="hint">KC&rarr;MBON synaptic weights are updated via biological spike-timing plasticity rules.</p>
+        </div>
+      </div>
+
+      <!-- TAB 3: COMPASS (2D Ring Attractor & Perturbations) -->
+      <div class="c-panel" id="tab-compass">
+        <div id="panel-canvas"><canvas id="brain"></canvas></div>
+        <div class="cc-controls">
+          <span class="cc-title">CONNECTOME PERTURBATION EXPERIMENTS</span>
+          <div id="experiments">
+            <button id="lesion" title="Silence the inhibitory Delta7 population">lesion Delta7</button>
+            <button id="scramble" title="Shuffle connections, keeping every neuron's degree">scramble wiring</button>
+            <button id="forget" title="Reset every synapse to naive">forget</button>
+          </div>
+          <p class="hint">Central Complex ring attractor: 16 wedge columns (EPG) held stable by 8 Delta7 inhibitory loopers.</p>
+        </div>
+      </div>
+
+      <!-- TAB 4: OPTICS (3D Bloom, Thickness & View Controls) -->
+      <div class="c-panel" id="tab-optics">
+        <div class="panel-inner">
+          <div class="row slider">
+            <label for="opt-glow">3D Synaptic Glow</label>
+            <input type="range" id="opt-glow" min="0.2" max="2.5" step="0.1" value="1.0" />
+            <output id="opt-glow-out">1.0x</output>
+          </div>
+          <div class="row slider">
+            <label for="opt-thick">Morphology Thickness</label>
+            <input type="range" id="opt-thick" min="0.5" max="3.0" step="0.25" value="1.0" />
+            <output id="opt-thick-out">1.0x</output>
+          </div>
+          <div class="row">
+            <label class="check">
+              <input type="checkbox" id="opt-spin" checked />
+              <span>Auto-rotate Connectome</span>
+            </label>
+          </div>
+          <div class="row" style="margin-top: 8px;">
+            <button class="sec-btn" id="opt-theme-toggle">☀️ / 🌙 Toggle Lighting Theme</button>
+            <button class="sec-btn" id="opt-reset-cam">Reset 3D Camera</button>
+          </div>
+          <p class="hint">Morphology data from Janelia FlyWire MaleCNS v1.0. Rendered via Three.js shaders.</p>
+        </div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<!-- Immersive Henry Heffernan Workstation -->
+<div id="desk"></div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module" src="./src/main.js?v=5"></script>
+</body>
+</html>
